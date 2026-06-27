@@ -154,58 +154,60 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex justify-between items-end border-b border-slate-200 pb-2">
-        <div className="flex gap-8">
+    <div className="flex-1 h-full flex flex-col relative">
+      {/* Header Bar */}
+      <div className="px-6 lg:px-8 pt-5 pb-0 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-4 overflow-x-auto scrollbar-none whitespace-nowrap">
+        <div className="flex gap-6 sm:gap-8 shrink-0">
           <button 
             onClick={() => setActiveTab('cardDisplay')} 
-            className={`pb-3 text-[14px] font-medium transition-colors relative ${activeTab === 'cardDisplay' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === 'cardDisplay' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
           >
             Team Card Display
-            {activeTab === 'cardDisplay' && <div className="absolute bottom-[-9px] left-0 w-full h-[2px] bg-slate-900" />}
+            {activeTab === 'cardDisplay' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
           </button>
           <button 
             onClick={() => setActiveTab('frequencies')} 
-            className={`pb-3 text-[14px] font-medium transition-colors relative ${activeTab === 'frequencies' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === 'frequencies' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
           >
             Check-in frequency
-            {activeTab === 'frequencies' && <div className="absolute bottom-[-9px] left-0 w-full h-[2px] bg-slate-900" />}
+            {activeTab === 'frequencies' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
           </button>
           <button 
             onClick={() => setActiveTab('templates')} 
-            className={`pb-3 text-[14px] font-medium transition-colors relative ${activeTab === 'templates' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === 'templates' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
           >
             Templates
-            {activeTab === 'templates' && <div className="absolute bottom-[-9px] left-0 w-full h-[2px] bg-slate-900" />}
+            {activeTab === 'templates' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
           </button>
           <button 
             onClick={() => setActiveTab('goals')} 
-            className={`pb-3 text-[14px] font-medium transition-colors relative ${activeTab === 'goals' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === 'goals' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
           >
             Goal Modal
-            {activeTab === 'goals' && <div className="absolute bottom-[-9px] left-0 w-full h-[2px] bg-slate-900" />}
+            {activeTab === 'goals' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
           </button>
           <button 
             onClick={() => setActiveTab('storage' as any)} 
-            className={`pb-3 text-[14px] font-medium transition-colors relative ${activeTab === ('storage' as any) ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === ('storage' as any) ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
           >
             Data Storage & Hosting
-            {activeTab === ('storage' as any) && <div className="absolute bottom-[-9px] left-0 w-full h-[2px] bg-slate-900" />}
+            {activeTab === ('storage' as any) && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
           </button>
         </div>
-        <div className="flex items-center gap-4 mb-2">
+        <div className="flex items-center gap-4 mb-3 shrink-0">
           {saveSuccess && <span className="text-[13px] font-medium text-emerald-600 flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-300"><CheckCircle2 className="w-4 h-4" /> Saved</span>}
           <button 
             onClick={handleSave} 
             disabled={isSaving}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[13px] font-medium rounded shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4" /> Save Configuration
           </button>
         </div>
       </div>
 
-      <div className="animate-in fade-in duration-300">
+      <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full pb-24">
+        <div className="animate-in fade-in duration-300">
         
         {activeTab === 'cardDisplay' && (
           <section className="max-w-5xl">
@@ -596,6 +598,7 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
             </div>
           </section>
         )}
+      </div>
       </div>
     </div>
   );

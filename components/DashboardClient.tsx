@@ -1072,24 +1072,23 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
-      <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-6">
-
-        {/* Tabs & Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-1">
-
-            <div className="flex bg-slate-100/80 backdrop-blur-sm p-1 rounded-xl shadow-inner border border-slate-200">
-              <button onClick={() => setTab("me")} className={`px-5 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "me" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Me</button>
-              <button onClick={() => setTab("team")} className={`px-5 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "team" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Team</button>
-              <button onClick={() => setTab("org")} className={`px-5 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "org" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Org</button>
-            </div>
+      {/* Header */}
+      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-4 overflow-x-auto scrollbar-none whitespace-nowrap">
+        <div className="shrink-0">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Tracker Dashboard</h1>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex bg-slate-100/80 backdrop-blur-sm p-1 rounded-xl shadow-inner border border-slate-200 shrink-0">
+            <button onClick={() => setTab("me")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "me" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Me</button>
+            <button onClick={() => setTab("team")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "team" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Team</button>
+            <button onClick={() => setTab("org")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "org" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Org</button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="relative">
               <button 
                 onClick={() => setIsAiDropdownOpen(!isAiDropdownOpen)}
-                className="px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-[13px] font-semibold rounded-lg transition flex items-center gap-2 shadow-sm mr-2"
+                className="px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-[13px] font-semibold rounded-lg transition flex items-center gap-2 shadow-sm"
               >
                 <Sparkles className="w-4 h-4 text-indigo-100" />
                 AI Insights
@@ -1099,7 +1098,7 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
               {isAiDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsAiDropdownOpen(false)}></div>
-                  <div className="absolute top-full mt-2 right-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="absolute top-full mt-2 right-0 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
                     <button 
                       onClick={() => { setShowWeeklyReview(true); setIsAiDropdownOpen(false); }}
                       className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
@@ -1108,15 +1107,15 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
                         <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                       </div>
                       <div>
-                        <div className="text-[13px] font-semibold text-slate-800">Draft Weekly Review</div>
+                        <div className="text-[13px] font-semibold text-slate-800">Weekly AI Review</div>
                       </div>
                     </button>
                     <button 
                       onClick={() => { setShowSentiment(true); setIsAiDropdownOpen(false); }}
                       className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
                     >
-                      <div className="w-7 h-7 rounded-md bg-pink-50 flex items-center justify-center shrink-0">
-                        <Smile className="w-3.5 h-3.5 text-pink-600" />
+                      <div className="w-7 h-7 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                       </div>
                       <div>
                         <div className="text-[13px] font-semibold text-slate-800">Sentiment Trend</div>
@@ -1170,6 +1169,9 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-6">
 
         {/* Grid */}
         {tab === "team" && activeWidgets.length > 0 && <DailyDigestBanner />}

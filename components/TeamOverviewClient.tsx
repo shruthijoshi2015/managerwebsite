@@ -68,72 +68,77 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
   }
 
   return (
-    <div className="flex-1 px-8 pt-4 pb-4 max-w-7xl mx-auto h-full flex flex-col relative">
-      {/* Page title */}
-      <h1 className="text-[22px] font-bold text-slate-900 tracking-tight mb-4">My Team</h1>
-
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-5">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search team..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 text-[13px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 bg-white shadow-sm w-full"
-          />
+    <div className="flex-1 h-full flex flex-col relative">
+      {/* Header */}
+      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
+        <div className="shrink-0">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">My Team</h1>
         </div>
 
-        {/* Filter button */}
-        <div className="relative">
-          <select 
-            value={genericFilter} 
-            onChange={e => setGenericFilter(e.target.value)}
-            className="flex items-center gap-2 px-3.5 py-2 pl-8 pr-8 text-[13px] font-medium text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors appearance-none outline-none focus:border-indigo-400 max-w-[200px]"
-          >
-            <option value="All">All Members</option>
-            <optgroup label="Departments">
-              {departments.filter(Boolean).map((d, i) => <option key={`dept-${i}`} value={d}>{d}</option>)}
-            </optgroup>
-            <optgroup label="Roles">
-              {roles.filter(Boolean).map((r, i) => <option key={`role-${i}`} value={r}>{r}</option>)}
-            </optgroup>
-          </select>
-          <SlidersHorizontal className="w-4 h-4 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
-        </div>
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Search */}
+          <div className="relative min-w-[120px] max-w-[200px] sm:max-w-[240px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search team..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-1.5 text-[13px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 bg-white shadow-sm w-full"
+            />
+          </div>
 
-        {/* View toggle */}
-        <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+          {/* Filter button */}
+          <div className="relative shrink-0">
+            <select 
+              value={genericFilter} 
+              onChange={e => setGenericFilter(e.target.value)}
+              className="flex items-center gap-2 px-3.5 py-1.5 pl-8 pr-7 text-[13px] font-medium text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors appearance-none outline-none focus:border-indigo-400 max-w-[140px] sm:max-w-[180px]"
+            >
+              <option value="All">All Members</option>
+              <optgroup label="Departments">
+                {departments.filter(Boolean).map((d, i) => <option key={`dept-${i}`} value={d}>{d}</option>)}
+              </optgroup>
+              <optgroup label="Roles">
+                {roles.filter(Boolean).map((r, i) => <option key={`role-${i}`} value={r}>{r}</option>)}
+              </optgroup>
+            </select>
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[9px]">▼</div>
+          </div>
+
+          {/* View toggle */}
+          <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm shrink-0">
+            <button
+              onClick={() => setView('grid')}
+              title="Grid view"
+              className={`p-1.5 rounded transition-colors ${view === 'grid' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView('list')}
+              title="List view"
+              className={`p-1.5 rounded transition-colors ${view === 'list' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* New Member */}
           <button
-            onClick={() => setView('grid')}
-            title="Grid view"
-            className={`p-1.5 rounded transition-colors ${view === 'grid' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-lg text-[13px] font-semibold shadow-sm transition-colors shrink-0"
           >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setView('list')}
-            title="List view"
-            className={`p-1.5 rounded transition-colors ${view === 'list' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            <List className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
+            New Member
           </button>
         </div>
-
-        {/* New Member */}
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-[13px] font-semibold shadow-sm transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Member
-        </button>
       </div>
 
-      {/* Content */}
+      <div className="flex-1 px-8 pt-6 pb-4 max-w-7xl mx-auto w-full">
+        {/* Content */}
       {view === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
           {sortedMembers.map(member => (
@@ -229,6 +234,7 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
           </div>
         </div>
       )}
+      </div>
 
       {prepTarget && (
         <PrepBriefPanel

@@ -68,51 +68,55 @@ export function NotesHubClient({ team }: { team: any[] }) {
   ];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto pb-24">
-      {/* Top Controls Bar */}
-      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-sm mb-12 relative z-20">
-        <div className="flex bg-slate-100/80 p-1 rounded-lg">
-          <button 
-            onClick={() => setView('timeline')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-[13px] font-semibold transition-all ${view === 'timeline' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            <Activity className="w-4 h-4" /> Timeline View
-          </button>
-          <button 
-            onClick={() => setView('board')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-[13px] font-semibold transition-all ${view === 'board' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            <Columns className="w-4 h-4" /> Board View
-          </button>
+    <div className="flex-1 h-full flex flex-col relative bg-[#f8f9fa] overflow-y-auto">
+      {/* Header */}
+      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
+        <div className="shrink-0">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Notes Hub</h1>
         </div>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex bg-slate-100/80 p-1 rounded-lg shrink-0">
+            <button 
+              onClick={() => setView('timeline')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all ${view === 'timeline' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Activity className="w-3.5 h-3.5" /> Timeline View
+            </button>
+            <button 
+              onClick={() => setView('board')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all ${view === 'board' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Columns className="w-3.5 h-3.5" /> Board View
+            </button>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-600 shadow-sm relative">
-            <select className="appearance-none bg-transparent outline-none pr-4 w-full cursor-pointer" value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
+          <div className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-lg text-[12px] sm:text-[13px] font-medium text-slate-600 shadow-sm relative shrink-0 max-w-[130px] sm:max-w-[160px]">
+            <select className="appearance-none bg-transparent outline-none pr-4 w-full cursor-pointer text-ellipsis" value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
               <option value="All">Filter By Team</option>
               {Array.from(new Set(team.map(m => m.name))).map(name => (
                 <option key={name as string} value={name as string}>{name as string}</option>
               ))}
             </select>
-            <span className="text-[10px] text-slate-400 absolute right-3 pointer-events-none">⌄</span>
+            <span className="text-[10px] text-slate-400 absolute right-2.5 pointer-events-none">⌄</span>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative min-w-[120px] max-w-[160px] sm:max-w-[200px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input 
               type="text" 
               placeholder="Search Notes" 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-1.5 w-48 bg-white border border-slate-200 rounded-lg text-[13px] outline-none focus:border-indigo-400 shadow-sm"
+              className="pl-8 pr-3 py-1 w-full bg-white border border-slate-200 rounded-lg text-[12px] sm:text-[13px] outline-none focus:border-indigo-400 shadow-sm"
             />
           </div>
-          <Link href="/team" className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[13px] font-semibold rounded-lg transition-colors shadow-sm">
+          <Link href="/team" className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[12px] sm:text-[13px] font-semibold rounded-lg transition-colors shadow-sm shrink-0">
             Add Note
           </Link>
         </div>
       </div>
 
-      {view === 'timeline' && (
+      <div className="p-8 max-w-6xl mx-auto pb-24 w-full">
+        {view === 'timeline' && (
         <div className="relative mt-8">
           {/* Center Timeline Line */}
           <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-slate-200 hidden md:block" />
@@ -261,6 +265,7 @@ export function NotesHubClient({ team }: { team: any[] }) {
           </div>
         </div>
       )}
+      </div>
 
     </div>
   );

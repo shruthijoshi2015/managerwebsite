@@ -5,7 +5,7 @@ export default function SettingsPage() {
   const db = readDb();
   
   return (
-    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto mt-4">
+    <div className="flex-1 h-full flex flex-col relative bg-[#f8f9fa] overflow-y-auto">
       <SettingsClient initialConfig={db.config} />
     </div>
   );
