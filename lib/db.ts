@@ -109,6 +109,7 @@ export type Reportee = {
   seniority?: 'Junior' | 'Mid-Level' | 'Senior' | 'Lead' | 'Staff' | string;
   careerTrack?: 'Individual Contributor' | 'Management' | string;
   performance?: 'High Performer' | 'Steady' | 'Needs Improvement' | string;
+  isManager?: boolean;
 };
 
 export type Database = {
@@ -143,7 +144,27 @@ export function readDb(): Database {
             showSubgoals: true
         }
       }, 
-      team: [] 
+      team: [{
+        id: 999,
+        name: "Alex Manager",
+        role: "Engineering Manager",
+        email: "alex.manager@company.com",
+        status: "Online",
+        checkInFreq: "weekly",
+        isManager: true,
+        department: "Engineering",
+        seniority: "Lead",
+        careerTrack: "Management",
+        notes: [],
+        goals: [
+          { id: 1001, title: "Deliver Q3 Strategic Roadmap", progress: 40, total: 100, status: "on_track" },
+          { id: 1002, title: "Hire 2 Senior Engineers", progress: 50, total: 100, status: "at_risk" }
+        ],
+        tasks: [
+          { id: 2001, title: "Review team budget proposals", done: false, status: "pending", priority: "P1", timeframe: "This Week" },
+          { id: 2002, title: "Complete Q2 performance evaluations", done: true, status: "resolved", priority: "P0", timeframe: "No Due Date" }
+        ]
+      }] 
     };
   }
   const data = fs.readFileSync(dbFile, 'utf-8');
@@ -174,7 +195,29 @@ export function readDb(): Database {
   }
 
   // Migrate tasks
-  if (parsed.team) {
+  if (!parsed.team || parsed.team.length === 0) {
+    parsed.team = [{
+      id: 999,
+      name: "Alex Manager",
+      role: "Engineering Manager",
+      email: "alex.manager@company.com",
+      status: "Online",
+      checkInFreq: "weekly",
+      isManager: true,
+      department: "Engineering",
+      seniority: "Lead",
+      careerTrack: "Management",
+      notes: [],
+      goals: [
+        { id: 1001, title: "Deliver Q3 Strategic Roadmap", progress: 40, total: 100, status: "on_track" },
+        { id: 1002, title: "Hire 2 Senior Engineers", progress: 50, total: 100, status: "at_risk" }
+      ],
+      tasks: [
+        { id: 2001, title: "Review team budget proposals", done: false, status: "pending", priority: "P1", timeframe: "This Week" },
+        { id: 2002, title: "Complete Q2 performance evaluations", done: true, status: "resolved", priority: "P0", timeframe: "No Due Date" }
+      ]
+    }];
+  } else if (parsed.team) {
     parsed.team.forEach((member: Reportee) => {
       if (member.tasks) {
         member.tasks = member.tasks.map((task: any) => {

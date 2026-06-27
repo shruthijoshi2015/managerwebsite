@@ -272,3 +272,38 @@ export async function deleteGoal(reporteeId: number, goalId: number) {
     revalidatePath(`/team/${reporteeId}`);
   }
 }
+
+export async function designateManagerRole(id: number | null, newManagerData?: { name: string; role: string; email: string }) {
+  const db = readDb();
+  db.team.forEach(m => { delete m.isManager; });
+  
+  if (id !== null && id !== undefined) {
+    const target = db.team.find(m => m.id === id);
+    if (target) {
+      target.isManager = true;
+    }
+  } else if (newManagerData) {
+    const mgr: Reportee = {
+      id: Date.now(),
+      name: newManagerData.name,
+      role: newManagerData.role || "Engineering Manager",
+      email: newManagerData.email || "manager@company.com",
+      status: "Online",
+      checkInFreq: "weekly",
+      isManager: true,
+      department: "Engineering",
+      seniority: "Lead",
+      careerTrack: "Management",
+      notes: [],
+      goals: [
+        { id: Date.now() + 1, title: "Deliver Strategic Roadmap", progress: 20, total: 100, status: "on_track" }
+      ],
+      tasks: [
+        { id: Date.now() + 2, title: "Conduct Weekly Syncs", done: false, status: "pending", priority: "P1", timeframe: "This Week" }
+      ]
+    };
+    db.team.unshift(mgr);
+  }
+  writeDb(db);
+  revalidatePath('/', 'layout');
+}

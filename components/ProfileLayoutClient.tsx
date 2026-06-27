@@ -59,10 +59,12 @@ const STATUS_OPTIONS = [
 
 const ICONS = ["🚀", "🎯", "📈", "⭐", "💡", "🔥", "🏆", "🛠️", "⚡", "✨", "📊", "✅"];
 
-function GoalModal({ 
-  reporteeId, allGoals, onClose, editGoal, initialParentId
+export function GoalModal({ 
+  reporteeId, allGoals, onClose, editGoal, initialParentId, teamMembers, onReporteeChange
 }: { 
   reporteeId: number; allGoals: Goal[]; onClose: () => void; editGoal?: Goal; initialParentId?: number;
+  teamMembers?: { id: number; name: string }[];
+  onReporteeChange?: (id: number) => void;
 }) {
   const { goalModalConfig } = useCardConfig();
   const [title, setTitle] = useState(editGoal?.title || "");
@@ -227,6 +229,22 @@ function GoalModal({
                 </button>
               )}
             </div>
+
+            {teamMembers && onReporteeChange && (
+              <div className="mb-6 flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200 w-fit">
+                <span className="text-[12px] font-medium text-slate-500">Assignee:</span>
+                <select 
+                  value={reporteeId} 
+                  onChange={(e) => onReporteeChange(parseInt(e.target.value))}
+                  disabled={isEditing}
+                  className="bg-transparent text-[13px] font-semibold text-slate-800 outline-none cursor-pointer"
+                >
+                  {teamMembers.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {isAiMode ? (
               <div className="bg-fuchsia-50/50 border border-fuchsia-100 rounded-xl p-6 relative overflow-hidden mb-6">
@@ -617,6 +635,7 @@ export function ProfileLayoutClient({
 }) {
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [editActionTask, setEditActionTask] = useState<any | undefined>(undefined);
   const [editGoal, setEditGoal] = useState<Goal | undefined>(undefined);
   const [initialParentId, setInitialParentId] = useState<number | undefined>(undefined);
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -1031,7 +1050,7 @@ export function ProfileLayoutClient({
                  <div className="flex justify-between items-center mb-3 shrink-0">
                    <h3 className="font-semibold text-slate-900 text-[15px]">Action Items</h3>
                    <button 
-                     onClick={() => setShowActionModal(true)}
+                     onClick={() => { setEditActionTask(undefined); setShowActionModal(true); }}
                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
                    >
                      Action +
@@ -1043,13 +1062,13 @@ export function ProfileLayoutClient({
                      <div className="flex flex-col">
 
                        {allTasks.map((task: Task) => (
-                         <TaskItem key={task.id} reporteeId={mockUser.id} task={task} />
+                         <TaskItem key={task.id} reporteeId={mockUser.id} task={task} onEdit={(t) => { setEditActionTask(t); setShowActionModal(true); }} />
                        ))}
                        {allTasks.length === 0 && <p className="text-[13px] text-slate-400 py-8 text-center">No action items.</p>}
                      </div>
                    </div>
                    <div className="border-t border-slate-100 bg-slate-50/30 p-2 flex justify-center shrink-0">
-                     <button className="text-[13px] text-slate-500 hover:text-slate-800 transition-colors font-medium">View all →</button>
+                     <Link href={`/actions?user=${encodeURIComponent(mockUser.name)}`} className="text-[13px] text-slate-500 hover:text-slate-800 transition-colors font-medium">View all →</Link>
                    </div>
                  </div>
               </div>
@@ -1073,7 +1092,8 @@ export function ProfileLayoutClient({
       {showActionModal && (
         <ActionModal
           reporteeId={mockUser.id}
-          onClose={() => setShowActionModal(false)}
+          editTask={editActionTask}
+          onClose={() => { setShowActionModal(false); setEditActionTask(undefined); }}
         />
       )}
       {/* Edit Profile Modal */}

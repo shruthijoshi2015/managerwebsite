@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Reportee } from "@/lib/db";
+import { designateManagerRole } from "@/lib/actions";
 import { PrepBriefPanel } from "./PrepBriefPanel";
 import { DailyDigestBanner } from "./DailyDigestBanner";
 import { WeeklyReviewPanel } from "./WeeklyReviewPanel";
@@ -49,18 +50,18 @@ const CS: Record<Size, string> = { sm: "col-span-1", md: "col-span-2", lg: "col-
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 const ME_GOALS = [
-  { id: 1, title: "Improve Team Communication", progress: 100, color: "#22c55e" },
-  { id: 2, title: "Increase Website Traffic", progress: 80, color: "#84cc16" },
-  { id: 3, title: "Increase Sales Pipeline", progress: 67, color: "#eab308" },
-  { id: 4, title: "Enable high impact features", progress: 64, color: "#eab308" },
-  { id: 5, title: "Launch 3 New Products", progress: 100, color: "#22c55e" },
-  { id: 6, title: "Achieve Company Growth", progress: 53, color: "#f97316" },
+  { id: 1, title: "Improve Team Communication", progress: 100, color: "#22c55e", status: "achieved" },
+  { id: 2, title: "Increase Website Traffic", progress: 80, color: "#84cc16", status: "on_track" },
+  { id: 3, title: "Increase Sales Pipeline", progress: 67, color: "#eab308", status: "on_track" },
+  { id: 4, title: "Enable high impact features", progress: 64, color: "#eab308", status: "at_risk" },
+  { id: 5, title: "Launch 3 New Products", progress: 100, color: "#22c55e", status: "achieved" },
+  { id: 6, title: "Achieve Company Growth", progress: 53, color: "#f97316", status: "at_risk" },
 ];
 
 const ME_TASKS = [
-  { id: 1, title: "Analyze Weekly Operations", done: true, due: "Apr 23", urgent: false },
-  { id: 2, title: "Weekly Review of Team", done: false, due: "Tmrw", urgent: true },
-  { id: 3, title: "Pair with Akhil on SSR", done: false, due: "Jun 15", urgent: false },
+  { id: 1, title: "Analyze Weekly Operations", done: true, due: "Apr 23", urgent: false, priority: "P2" },
+  { id: 2, title: "Weekly Review of Team", done: false, due: "Tmrw", urgent: true, priority: "P0" },
+  { id: 3, title: "Pair with Akhil on SSR", done: false, due: "Jun 15", urgent: false, priority: "P2" },
 ];
 
 const MEETINGS_1ON1 = [
@@ -227,37 +228,71 @@ function MeFocusBanner() {
   );
 }
 
-function GoalProgressStat() {
-  const avg = Math.round(ME_GOALS.reduce((a, g) => a + g.progress, 0) / ME_GOALS.length);
-  return <StatTile label="Goal progress" val={<>{avg}<span className="text-[18px]">%</span></>} subEl={<div className="flex items-center gap-1 text-[12px] text-emerald-600"><TrendingUp className="w-3.5 h-3.5" />+5% this week</div>} />;
+function GoalProgressStat({ manager }: { manager?: Reportee }) {
+  const goals = manager?.goals?.length ? manager.goals : ME_GOALS;
+  const avg = goals.length ? Math.round(goals.reduce((a, g) => a + g.progress, 0) / goals.length) : 0;
+  const url = manager ? `/goals?user=${encodeURIComponent(manager.name)}` : "/goals";
+  return <StatTile label="Goal progress" val={<>{avg}<span className="text-[18px]">%</span></>} subEl={<Link href={url} className="flex items-center gap-1 text-[12px] text-emerald-600 hover:underline"><TrendingUp className="w-3.5 h-3.5" />View manager goals →</Link>} />;
 }
 
-function TasksDoneStat() {
-  const done = ME_TASKS.filter(t => t.done).length;
-  return <StatTile label="Tasks done" val={<>{done}<span className="text-[18px] font-normal text-slate-400">/{ME_TASKS.length}</span></>} subEl={<div className="flex items-center gap-1 text-[12px] text-slate-500"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />2 due this week</div>} />;
+function TasksDoneStat({ manager }: { manager?: Reportee }) {
+  const tasks = manager?.tasks?.length ? manager.tasks : ME_TASKS;
+  const done = tasks.filter(t => t.done).length;
+  const url = manager ? `/actions?user=${encodeURIComponent(manager.name)}` : "/actions";
+  return <StatTile label="Tasks done" val={<>{done}<span className="text-[18px] font-normal text-slate-400">/{tasks.length}</span></>} subEl={<Link href={url} className="flex items-center gap-1 text-[12px] text-slate-500 hover:underline"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />View manager tasks →</Link>} />;
 }
 
-function GoalsAtRiskStat() {
-  const n = ME_GOALS.filter(g => g.progress < 60).length;
-  return <StatTile amber label="Goals at risk" val={n} subEl={<div><div className="flex items-center gap-1 text-[12px] text-amber-600 mb-0.5"><AlertTriangle className="w-3 h-3" />Needs attention</div><Link href="/goals" className="text-[12px] text-slate-400 hover:text-slate-700 inline-block">Review →</Link></div>} />;
+function GoalsAtRiskStat({ manager }: { manager?: Reportee }) {
+  const goals = manager?.goals?.length ? manager.goals : ME_GOALS;
+  const n = goals.filter((g: any) => g.status === 'at_risk' || g.status === 'off_track' || g.progress < 60).length;
+  const url = manager ? `/goals?user=${encodeURIComponent(manager.name)}` : "/goals";
+  return <StatTile amber label="Goals at risk" val={n} subEl={<div><div className="flex items-center gap-1 text-[12px] text-amber-600 mb-0.5"><AlertTriangle className="w-3 h-3" />Needs attention</div><Link href={url} className="text-[12px] text-slate-400 hover:text-slate-700 inline-block font-medium">Review manager goals →</Link></div>} />;
 }
 
-function MyActiveGoals() {
-  if (!ME_GOALS.length) return <><Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={0} actionUrl="/goals" actionLabel="View all" /><Empty emoji="🎯" title="No goals yet" sub="Set your first goal to start tracking what matters to you." cta={{ label: "+ Create a goal", onClick: () => {} }} /></>;
+function MyActiveGoals({ manager }: { manager?: Reportee }) {
+  const goals = manager?.goals?.length ? manager.goals : ME_GOALS;
+  const url = manager ? `/goals?user=${encodeURIComponent(manager.name)}` : "/goals";
+  if (!goals.length) return <><Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={0} actionUrl={url} actionLabel="View all" /><Empty emoji="🎯" title="No goals yet" sub="Set your first goal to start tracking what matters to you." cta={{ label: "+ Create a goal", onClick: () => {} }} /></>;
   return (
     <>
-      <Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={ME_GOALS.length} actionUrl="/goals" actionLabel="View all" />
+      <Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={goals.length} actionUrl={url} actionLabel="View all" />
       <div className="space-y-3">
-        {ME_GOALS.slice(0, 6).map(g => (
-          <div key={g.id} className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
-            <span className="text-[13px] text-slate-700 truncate flex-1">{g.title}</span>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${g.progress}%`, backgroundColor: g.color }} />
+        {goals.slice(0, 6).map((g, idx) => {
+          const colors = ["#6366f1", "#10b981", "#3b82f6", "#f59e0b", "#ec4899"];
+          const color = (g as any).color || colors[idx % colors.length];
+          return (
+            <div key={g.id} className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <Link href={url} className="text-[13px] text-slate-700 truncate flex-1 hover:text-indigo-600 font-medium">{g.title}</Link>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${g.progress}%`, backgroundColor: color }} />
+                </div>
+                <span className="text-[12px] font-semibold text-slate-700 w-8 text-right">{g.progress}%</span>
               </div>
-              <span className="text-[12px] font-semibold text-slate-700 w-8 text-right">{g.progress}%</span>
             </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function MyTasks({ manager }: { manager?: Reportee }) {
+  const tasks = manager?.tasks?.length ? manager.tasks : ME_TASKS;
+  const url = manager ? `/actions?user=${encodeURIComponent(manager.name)}` : "/actions";
+  if (!tasks.length) return <><Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={0} actionUrl={url} actionLabel="View all" /><Empty emoji="✅" title="No tasks right now" sub="You're caught up. Add a task when something new comes up." cta={{ label: "+ Add task", onClick: () => {} }} /></>;
+  return (
+    <>
+      <Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={tasks.length} actionUrl={url} actionLabel="View all" />
+      <div className="space-y-2.5">
+        {tasks.map(t => (
+          <div key={t.id} className="flex items-center gap-3">
+            <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 transition-colors ${t.done ? "bg-emerald-500 border-emerald-500" : "border-slate-300"}`}>
+              {t.done && <Check className="w-2.5 h-2.5 text-white" />}
+            </div>
+            <Link href={url} className={`text-[13px] flex-1 truncate hover:text-indigo-600 font-medium ${t.done ? "text-slate-400 line-through" : "text-slate-700"}`}>{t.title}</Link>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full shrink-0 font-medium ${(t as any).urgent || (t as any).priority === 'P0' ? "bg-red-50 text-red-600 border border-red-100" : "bg-slate-100 text-slate-500"}`}>{(t as any).due || (t as any).timeframe || "No Due Date"}</span>
           </div>
         ))}
       </div>
@@ -265,22 +300,87 @@ function MyActiveGoals() {
   );
 }
 
-function MyTasks() {
-  if (!ME_TASKS.length) return <><Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={0} actionUrl="/tasks" actionLabel="View all" /><Empty emoji="✅" title="No tasks right now" sub="You're caught up. Add a task when something new comes up." cta={{ label: "+ Add task", onClick: () => {} }} /></>;
+function MissingManagerBanner({ team }: { team: Reportee[] }) {
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState("Alex Manager");
+  const [role, setRole] = useState("Engineering Manager");
+  const [email, setEmail] = useState("manager@company.com");
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    setIsSubmitting(true);
+    if (selectedId) {
+      await designateManagerRole(Number(selectedId));
+    } else {
+      await designateManagerRole(null, { name, role, email });
+    }
+    setIsSubmitting(false);
+    setShowModal(false);
+  };
+
   return (
     <>
-      <Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={ME_TASKS.length} actionUrl="/tasks" actionLabel="View all" />
-      <div className="space-y-2.5">
-        {ME_TASKS.map(t => (
-          <div key={t.id} className="flex items-center gap-3">
-            <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 transition-colors ${t.done ? "bg-emerald-500 border-emerald-500" : "border-slate-300"}`}>
-              {t.done && <Check className="w-2.5 h-2.5 text-white" />}
-            </div>
-            <span className={`text-[13px] flex-1 truncate ${t.done ? "text-slate-400 line-through" : "text-slate-700"}`}>{t.title}</span>
-            <span className={`text-[11px] px-2 py-0.5 rounded-full shrink-0 font-medium ${t.urgent ? "bg-red-50 text-red-600 border border-red-100" : "bg-slate-100 text-slate-500"}`}>{t.due}</span>
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white mb-6 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl bg-white/20 p-2 rounded-lg">👑</div>
+          <div>
+            <h3 className="font-bold text-sm sm:text-base">No Manager Profile Designated</h3>
+            <p className="text-xs sm:text-sm text-indigo-100">To personalize your "Me" dashboard widgets and track your own tasks & goals, designate or create your manager profile.</p>
           </div>
-        ))}
+        </div>
+        <button onClick={() => setShowModal(true)} className="bg-white text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition shrink-0 shadow-sm">
+          Setup Manager Profile →
+        </button>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl text-slate-800 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold mb-1">Setup Manager Profile</h3>
+            <p className="text-xs text-slate-500 mb-4">Choose an existing team member as the Manager, or create a new Manager profile.</p>
+            
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Designate Existing Team Member</label>
+              <select 
+                value={selectedId} 
+                onChange={e => setSelectedId(e.target.value)}
+                className="w-full border border-slate-200 rounded-lg p-2 text-sm bg-white"
+              >
+                <option value="">-- Create New Manager Profile Instead --</option>
+                {team.map(m => (
+                  <option key={m.id} value={m.id}>{m.name} ({m.role})</option>
+                ))}
+              </select>
+            </div>
+
+            {!selectedId && (
+              <div className="space-y-3 border-t border-slate-100 pt-3">
+                <div className="text-xs font-semibold text-indigo-600">New Manager Details</div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">Name</label>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full border border-slate-200 rounded-lg p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">Role</label>
+                  <input type="text" value={role} onChange={e => setRole(e.target.value)} className="w-full border border-slate-200 rounded-lg p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">Email</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border border-slate-200 rounded-lg p-2 text-sm" />
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button disabled={isSubmitting} onClick={handleSave} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow">
+                {isSubmitting ? "Saving..." : "Save Manager Profile"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -312,10 +412,10 @@ function Upcoming1on1s({ onPrep }: { onPrep?: (name: string) => void }) {
 
 function QuickActions() {
   const actions = [
-    { icon: <Target className="w-5 h-5" />, label: "New goal", sub: "Set a new objective", color: "text-indigo-500", bg: "bg-indigo-50", url: "/goals/new" },
-    { icon: <CheckSquare className="w-5 h-5" />, label: "New task", sub: "Add an action item", color: "text-emerald-500", bg: "bg-emerald-50", url: "/tasks/new" },
-    { icon: <CalendarDays className="w-5 h-5" />, label: "Schedule 1:1", sub: "Pick a time slot", color: "text-blue-500", bg: "bg-blue-50", url: "/meetings/new" },
-    { icon: <MessageSquare className="w-5 h-5" />, label: "Check-in", sub: "Daily reflection", color: "text-violet-500", bg: "bg-violet-50", url: "/checkins/new" },
+    { icon: <Target className="w-5 h-5" />, label: "New goal", sub: "Set a new objective", color: "text-indigo-500", bg: "bg-indigo-50", url: "/goals?new=true" },
+    { icon: <CheckSquare className="w-5 h-5" />, label: "New task", sub: "Add an action item", color: "text-emerald-500", bg: "bg-emerald-50", url: "/actions?new=true" },
+    { icon: <CalendarDays className="w-5 h-5" />, label: "Schedule 1:1", sub: "Pick a time slot", color: "text-blue-500", bg: "bg-blue-50", url: "/team" },
+    { icon: <MessageSquare className="w-5 h-5" />, label: "Check-in", sub: "Daily reflection", color: "text-violet-500", bg: "bg-violet-50", url: "/notes" },
   ];
   return (
     <>
@@ -1008,41 +1108,19 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
     }
   }
 
-  const activeWidgets = tab === "me" ? meWidgets : teamWidgets;
-  const setActiveWidgets = tab === "me" ? setMeWidgets : setTeamWidgets;
-
-  function addWidget(widgetId: string, size: Size) {
-    setActiveWidgets(prev => [...prev, mkW(widgetId, size)]);
-  }
-  function removeWidget(instanceId: string) {
-    setActiveWidgets(prev => prev.filter(w => w.instanceId !== instanceId));
-  }
-  function resizeWidget(instanceId: string, size: Size) {
-    setActiveWidgets(prev => prev.map(w => w.instanceId === instanceId ? { ...w, size } : w));
-  }
-  function reorder(from: number, to: number) {
-    if (from === to) return;
-    setActiveWidgets(prev => {
-      const arr = [...prev];
-      const [el] = arr.splice(from, 1);
-      arr.splice(to, 0, el);
-      return arr;
-    });
-  }
-  function resetDefault() {
-    const base = tab === "me" ? ME_DEFAULT : TEAM_DEFAULT;
-    const fresh = base.map(w => ({ ...w, instanceId: uid() }));
-    if (tab === "me") setMeWidgets(fresh); else setTeamWidgets(fresh);
-  }
+  const managerUser = useMemo(() => {
+    return team.find(m => m.isManager) || team[0] || undefined;
+  }, [team]);
+  const hasDesignatedManager = useMemo(() => team.some(m => m.isManager), [team]);
 
   function renderContent(inst: WidgetInstance): React.ReactNode {
     switch (inst.widgetId) {
       case "focus-banner": return <MeFocusBanner />;
-      case "goal-progress": return <GoalProgressStat />;
-      case "tasks-done": return <TasksDoneStat />;
-      case "goals-at-risk": return <GoalsAtRiskStat />;
-      case "my-active-goals": return <MyActiveGoals />;
-      case "my-tasks": return <MyTasks />;
+      case "goal-progress": return <GoalProgressStat manager={managerUser} />;
+      case "tasks-done": return <TasksDoneStat manager={managerUser} />;
+      case "goals-at-risk": return <GoalsAtRiskStat manager={managerUser} />;
+      case "my-active-goals": return <MyActiveGoals manager={managerUser} />;
+      case "my-tasks": return <MyTasks manager={managerUser} />;
       case "upcoming-1on1s": return <Upcoming1on1s onPrep={handlePrepClick} />;
       case "quick-actions": return <QuickActions />;
       case "monthly-calendar": return <MonthlyCalendar />;
@@ -1070,83 +1148,116 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
     }
   }
 
+  const activeWidgets = tab === "me" ? meWidgets : teamWidgets;
+  const setActiveWidgets = tab === "me" ? setMeWidgets : setTeamWidgets;
+
+  function addWidget(widgetId: string, size: Size) {
+    setActiveWidgets(prev => [...prev, mkW(widgetId, size)]);
+  }
+  function removeWidget(instanceId: string) {
+    setActiveWidgets(prev => prev.filter(w => w.instanceId !== instanceId));
+  }
+  function resizeWidget(instanceId: string, size: Size) {
+    setActiveWidgets(prev => prev.map(w => w.instanceId === instanceId ? { ...w, size } : w));
+  }
+  function reorder(from: number, to: number) {
+    if (from === to) return;
+    setActiveWidgets(prev => {
+      const arr = [...prev];
+      const [el] = arr.splice(from, 1);
+      arr.splice(to, 0, el);
+      return arr;
+    });
+  }
+  function resetDefault() {
+    const base = tab === "me" ? ME_DEFAULT : TEAM_DEFAULT;
+    const fresh = base.map(w => ({ ...w, instanceId: uid() }));
+    if (tab === "me") setMeWidgets(fresh); else setTeamWidgets(fresh);
+  }
+
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-y-auto relative">
       {/* Header */}
       <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-4 overflow-x-auto scrollbar-none whitespace-nowrap">
         <div className="shrink-0">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Tracker Dashboard</h1>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex bg-slate-100/80 backdrop-blur-sm p-1 rounded-xl shadow-inner border border-slate-200 shrink-0">
-            <button onClick={() => setTab("me")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "me" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Me</button>
-            <button onClick={() => setTab("team")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "team" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Team</button>
-            <button onClick={() => setTab("org")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "org" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Org</button>
+
+        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex bg-slate-100/80 backdrop-blur-sm p-1 rounded-xl shadow-inner border border-slate-200 shrink-0">
+              <button onClick={() => setTab("me")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "me" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Me</button>
+              <button onClick={() => setTab("team")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "team" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Team</button>
+              <button onClick={() => setTab("org")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "org" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Org</button>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="relative">
+                <button 
+                  onClick={() => setIsAiDropdownOpen(!isAiDropdownOpen)}
+                  className="px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-[13px] font-semibold rounded-lg transition flex items-center gap-2 shadow-sm"
+                >
+                  <Sparkles className="w-4 h-4 text-indigo-100" />
+                  AI Insights
+                  <ChevronDown className="w-4 h-4 opacity-70 ml-1" />
+                </button>
+                
+                {isAiDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsAiDropdownOpen(false)}></div>
+                    <div className="absolute top-full mt-2 right-0 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
+                      <button 
+                        onClick={() => { setShowWeeklyReview(true); setIsAiDropdownOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center shrink-0">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-semibold text-slate-800">Weekly AI Review</div>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => { setShowSentiment(true); setIsAiDropdownOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
+                          <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-semibold text-slate-800">Sentiment Trend</div>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => { setShowSkillMatrix(true); setIsAiDropdownOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-md bg-violet-50 flex items-center justify-center shrink-0">
+                          <Users className="w-3.5 h-3.5 text-violet-600" />
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-semibold text-slate-800">Skill Matrix</div>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => { setShowRiskRadar(true); setIsAiDropdownOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-md bg-amber-50 flex items-center justify-center shrink-0">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-semibold text-slate-800">Risk Radar</div>
+                        </div>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <div className="relative">
-              <button 
-                onClick={() => setIsAiDropdownOpen(!isAiDropdownOpen)}
-                className="px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-[13px] font-semibold rounded-lg transition flex items-center gap-2 shadow-sm"
-              >
-                <Sparkles className="w-4 h-4 text-indigo-100" />
-                AI Insights
-                <ChevronDown className="w-4 h-4 opacity-70 ml-1" />
-              </button>
-              
-              {isAiDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsAiDropdownOpen(false)}></div>
-                  <div className="absolute top-full mt-2 right-0 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
-                    <button 
-                      onClick={() => { setShowWeeklyReview(true); setIsAiDropdownOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                    >
-                      <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center shrink-0">
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <div className="text-[13px] font-semibold text-slate-800">Weekly AI Review</div>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => { setShowSentiment(true); setIsAiDropdownOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                    >
-                      <div className="w-7 h-7 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <div className="text-[13px] font-semibold text-slate-800">Sentiment Trend</div>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => { setShowSkillMatrix(true); setIsAiDropdownOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                    >
-                      <div className="w-7 h-7 rounded-md bg-violet-50 flex items-center justify-center shrink-0">
-                        <Users className="w-3.5 h-3.5 text-violet-600" />
-                      </div>
-                      <div>
-                        <div className="text-[13px] font-semibold text-slate-800">Skill Matrix</div>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => { setShowRiskRadar(true); setIsAiDropdownOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                    >
-                      <div className="w-7 h-7 rounded-md bg-orange-50 flex items-center justify-center shrink-0">
-                        <ShieldAlert className="w-3.5 h-3.5 text-orange-600" />
-                      </div>
-                      <div>
-                        <div className="text-[13px] font-semibold text-slate-800">Team Risk Radar</div>
-                      </div>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
             <button
               onClick={() => setShowGallery(true)}
               className="flex items-center gap-1.5 bg-slate-900 text-white px-3.5 py-2 rounded-lg text-[13px] font-semibold hover:bg-slate-800 transition-colors shadow-sm"
@@ -1174,6 +1285,7 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
       <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-6">
 
         {/* Grid */}
+        {!hasDesignatedManager && <MissingManagerBanner team={team} />}
         {tab === "team" && activeWidgets.length > 0 && <DailyDigestBanner />}
         {activeWidgets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-28 text-center">

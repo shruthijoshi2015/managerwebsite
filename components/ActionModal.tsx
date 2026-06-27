@@ -31,15 +31,31 @@ export function ActionModal({
 
     setIsSaving(true);
     
-    const fd = new FormData();
-    fd.set("title", title);
-    fd.set("status", status);
-    fd.set("priority", priority);
-    fd.set("timeframe", timeframe);
-    fd.set("owner", owner);
+    if (editTask) {
+      await fetch("/api/update-action-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: typeof editTask.id === 'string' ? editTask.id : 'manual-' + editTask.id,
+          reporteeId: finalReporteeId,
+          title,
+          status,
+          priority,
+          timeframe,
+          newReporteeId: finalReporteeId
+        })
+      });
+    } else {
+      const fd = new FormData();
+      fd.set("title", title);
+      fd.set("status", status);
+      fd.set("priority", priority);
+      fd.set("timeframe", timeframe);
+      fd.set("owner", owner);
 
-    const { addTask } = await import("@/lib/actions");
-    await addTask(finalReporteeId, fd);
+      const { addTask } = await import("@/lib/actions");
+      await addTask(finalReporteeId, fd);
+    }
     
     setIsSaving(false);
     onClose();
