@@ -760,6 +760,138 @@
           "timeframe": "No Due Date"
         }
       ]
+    },
+    {
+      "id": 1782631592145,
+      "name": "REG01_1782631582710",
+      "role": "Regression QA",
+      "email": "reg01_1782631582710@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782631623378,
+      "name": "REG06_1782631620901",
+      "role": "IDB Sync Test",
+      "email": "reg06_1782631620901@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782631725914,
+      "name": "REG01_1782631721873",
+      "role": "Regression QA",
+      "email": "reg01_1782631721873@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782631887070,
+      "name": "REG01_1782631884513",
+      "role": "Regression QA",
+      "email": "reg01_1782631884513@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782631909076,
+      "name": "REG06_1782631906293",
+      "role": "IDB Sync Test",
+      "email": "reg06_1782631906293@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782632122865,
+      "name": "REG01_1782632116573",
+      "role": "Regression QA",
+      "email": "reg01_1782632116573@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782632149333,
+      "name": "REG06_1782632146272",
+      "role": "IDB Sync Test",
+      "email": "reg06_1782632146272@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782632724626,
+      "name": "REG01_1782632716586",
+      "role": "Regression QA",
+      "email": "reg01_1782632716586@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782632768619,
+      "name": "REG06_1782632765641",
+      "role": "IDB Sync Test",
+      "email": "reg06_1782632765641@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782632844738,
+      "name": "REG01_1782632841319",
+      "role": "Regression QA",
+      "email": "reg01_1782632841319@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
+    },
+    {
+      "id": 1782632866020,
+      "name": "REG06_1782632863457",
+      "role": "IDB Sync Test",
+      "email": "reg06_1782632863457@co.com",
+      "department": "Engineering",
+      "status": "Offline",
+      "checkInFreq": "weekly",
+      "notes": [],
+      "goals": [],
+      "tasks": []
     }
   ]
 }
