@@ -2,6 +2,9 @@ import { readDb } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ProfileLayoutClient } from "@/components/ProfileLayoutClient";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function ReporteeProfile({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const db = readDb();

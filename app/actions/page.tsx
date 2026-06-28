@@ -2,6 +2,9 @@ import { readDb } from "@/lib/db";
 import { ActionItemsClient } from "@/components/ActionItemsClient";
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function ActionsPage() {
   const db = readDb();
   return (

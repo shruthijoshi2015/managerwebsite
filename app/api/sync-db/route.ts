@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { readDb, writeDb } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET: Returns current server database to seed empty IndexedDB
 export async function GET() {
   try {

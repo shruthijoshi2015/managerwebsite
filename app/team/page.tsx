@@ -1,6 +1,9 @@
 import { readDb } from "@/lib/db";
 import { TeamOverviewClient } from "@/components/TeamOverviewClient";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function TeamPage() {
   const db = readDb();
   

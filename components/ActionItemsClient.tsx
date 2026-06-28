@@ -52,6 +52,30 @@ function ColHeader({ label, col, sortCol, sortDir, onSort, filterValues, activeF
   );
 }
 
+function getTimeframeRank(tf: string): number {
+  if (!tf || tf.toLowerCase().includes('no due') || tf.toLowerCase() === 'none') return Infinity;
+  const lower = tf.toLowerCase();
+  const qMatch = lower.match(/q([1-4])\s*(\d{4})?/);
+  if (qMatch) {
+    const q = parseInt(qMatch[1]);
+    const yr = qMatch[2] ? parseInt(qMatch[2]) : new Date().getFullYear();
+    const month = (q - 1) * 3;
+    return new Date(yr, month, 1).getTime();
+  }
+  if (lower.includes('today')) return Date.now();
+  if (lower.includes('tomorrow')) return Date.now() + 86400000;
+  if (lower.includes('next week')) return Date.now() + 7 * 86400000;
+  
+  const parsed = Date.parse(tf);
+  if (!isNaN(parsed)) return parsed;
+
+  const cleaned = tf.replace(/(\d+)(st|nd|rd|th)/g, '$1');
+  const parsedCleaned = Date.parse(`${cleaned} ${new Date().getFullYear()}`);
+  if (!isNaN(parsedCleaned)) return parsedCleaned;
+
+  return Infinity - 1;
+}
+
 export function ActionItemsClient({ team }: { team: any[] }) {
   const router = useRouter();
   const { persistAfterMutation } = useIndexedDB();
@@ -142,7 +166,6 @@ export function ActionItemsClient({ team }: { team: any[] }) {
         member.notes.forEach((note: any) => {
           if (note.aiSummary?.followUps) {
             note.aiSummary.followUps.forEach((fUp: any, i: number) => {
-              // Deterministic pseudo-random status and priority for UI demo
               const charCode = fUp.task.charCodeAt(0) || 0;
               const isResolved = i % 4 === 0;
               const status = isResolved ? 'resolved' : charCode % 2 === 0 ? 'in_progress' : 'pending';
@@ -183,7 +206,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
     return items.map(item => ({
       ...item,
       status: localStatusOverrides[item.id] || item.status
-    })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }));
   }, [team, localStatusOverrides]);
 
   const memberValues = useMemo(() => [...new Set(allActionItems.map(i => i.member.name))], [allActionItems]);
@@ -200,8 +223,13 @@ export function ActionItemsClient({ team }: { team: any[] }) {
       return matchesSearch && matchesTeam && matchesColMember && matchesColPriority && matchesColStatus;
     });
 
-    if (sortCol && sortDir) {
-      items = [...items].sort((a, b) => {
+    return [...items].sort((a, b) => {
+      const aResolved = a.status === 'resolved' || a.status === 'done';
+      const bResolved = b.status === 'resolved' || b.status === 'done';
+      if (aResolved && !bResolved) return 1;
+      if (!aResolved && bResolved) return -1;
+
+      if (sortCol && sortDir) {
         let av = "";
         let bv = "";
         if (sortCol === "task") { av = a.task; bv = b.task; }
@@ -209,10 +237,16 @@ export function ActionItemsClient({ team }: { team: any[] }) {
         else if (sortCol === "priority") { av = a.priority; bv = b.priority; }
         else if (sortCol === "status") { av = a.status; bv = b.status; }
         else if (sortCol === "timeframe") { av = a.timeframe; bv = b.timeframe; }
-        return sortDir === "asc" ? (av < bv ? -1 : av > bv ? 1 : 0) : (av > bv ? -1 : av < bv ? 1 : 0);
-      });
-    }
-    return items;
+        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+        if (cmp !== 0) return sortDir === "asc" ? cmp : -cmp;
+      }
+
+      const aRank = getTimeframeRank(a.timeframe);
+      const bRank = getTimeframeRank(b.timeframe);
+      if (aRank !== bRank) return aRank - bRank;
+
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
   }, [allActionItems, searchQuery, filterTeam, colFilters, sortCol, sortDir]);
 
   // Group items by member for the grouped view

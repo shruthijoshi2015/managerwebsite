@@ -114,7 +114,7 @@ export function IndexedDBProvider({ children }: { children: ReactNode }) {
   const persistAfterMutation = useCallback(async () => {
     // Re-fetch from server and save to IndexedDB
     try {
-      const res = await fetch('/api/sync-db');
+      const res = await fetch('/api/sync-db', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         await saveIndexedDBData(data);

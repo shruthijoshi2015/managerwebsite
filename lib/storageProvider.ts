@@ -108,7 +108,7 @@ export async function seedIndexedDB(force = false): Promise<any> {
   let data = await getIndexedDBData();
   if (!data || force) {
     // Fetch from server and seed
-    const res = await fetch('/api/sync-db');
+    const res = await fetch('/api/sync-db', { cache: 'no-store' });
     if (res.ok) {
       data = await res.json();
       await saveIndexedDBData(data);
