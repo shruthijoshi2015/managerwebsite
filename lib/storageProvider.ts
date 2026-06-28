@@ -104,16 +104,16 @@ export async function setLastSyncTimestamp(): Promise<void> {
  * Seed IndexedDB from the server if empty.
  * Returns the database object (either from IndexedDB or freshly seeded).
  */
-export async function seedIndexedDB(): Promise<any> {
+export async function seedIndexedDB(force = false): Promise<any> {
   let data = await getIndexedDBData();
-  if (!data) {
+  if (!data || force) {
     // Fetch from server and seed
     const res = await fetch('/api/sync-db');
     if (res.ok) {
       data = await res.json();
       await saveIndexedDBData(data);
       await setLastSyncTimestamp();
-      console.log('[ManagerOS] IndexedDB seeded from server');
+      console.log('[ManagerOS] IndexedDB synced from server');
     }
   }
   return data;

@@ -22,8 +22,9 @@ export async function addReportee(formData: FormData) {
   db.team.push(newReportee);
   writeDb(db);
   
+  revalidatePath('/', 'layout');
   revalidatePath('/team');
-  redirect('/team');
+  return { success: true, id: newReportee.id };
 }
 
 export async function saveNotes(id: number, type: string, content: string) {

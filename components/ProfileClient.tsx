@@ -3,10 +3,12 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { addTask, addGoal, toggleTask, updateCheckInFreq, updateGoalProgress, toggleTaskOwner } from "@/lib/actions";
+import { useIndexedDB } from "./IndexedDBProvider";
 
 import { Reportee, Task } from "@/lib/db";
 
 export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { reporteeId: number, task: any, readOnly?: boolean, onEdit?: (task: any) => void }) {
+  const { persistAfterMutation } = useIndexedDB();
   const getPriorityColor = (p: string) => {
     if (p === 'P0') return "bg-rose-100 text-rose-700 border-rose-200";
     if (p === 'P1') return "bg-orange-100 text-orange-700 border-orange-200";
@@ -14,7 +16,7 @@ export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { repor
   };
   
   return (
-    <div key={task.id} tabIndex={0} className={`flex flex-col gap-2 py-3 px-3 border-b last:border-0 border-slate-100 transition-all focus-within:ring-1 focus-within:ring-slate-200 focus-visible:outline-none ${task.owner === 'manager' ? 'bg-slate-50/50' : 'bg-white'}`}>
+    <div key={task.id} tabIndex={0} onClick={(e) => { if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'BUTTON') onEdit?.(task); }} className={`flex flex-col gap-2 py-3 px-3 border-b last:border-0 border-slate-100 transition-all cursor-pointer focus-within:ring-1 focus-within:ring-slate-200 focus-visible:outline-none ${task.owner === 'manager' ? 'bg-slate-50/50' : 'bg-white'}`}>
       <div className="flex items-start gap-3 w-full group">
         <div className="relative flex items-start pt-0.5 shrink-0">
           <input 
@@ -23,7 +25,7 @@ export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { repor
             className={`w-4 h-4 rounded-sm border-slate-300 focus:ring-1 mt-0.5 cursor-pointer text-slate-800 focus:ring-slate-800 accent-slate-800`} 
             checked={task.done} 
             disabled={readOnly}
-            onChange={(e) => toggleTask(reporteeId, task.id, e.target.checked)} 
+            onChange={async (e) => { await toggleTask(reporteeId, task.id, e.target.checked); await persistAfterMutation(); }} 
           />
         </div>
         <div className="flex flex-col flex-1 w-full min-w-0">
@@ -32,14 +34,9 @@ export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { repor
               {task.title}
             </span>
             {task.owner === 'manager' && (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit?.(task); }}
-                className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-sm shrink-0 whitespace-nowrap cursor-pointer transition-colors border border-transparent hover:border-indigo-200"
-                title="Click to edit action item"
-              >
+              <span className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-indigo-50 text-indigo-600 rounded-sm shrink-0 whitespace-nowrap">
                 My Action
-              </button>
+              </span>
             )}
             {!readOnly && onEdit && (
               <button
@@ -48,54 +45,51 @@ export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { repor
                 className="p-1 text-slate-400 hover:text-indigo-600 rounded transition-colors inline-flex items-center ml-1"
                 title="Edit Action Item"
               >
-                ✏️
+                ✏️ Edit
               </button>
             )}
           </div>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${getPriorityColor(task.priority || 'P2')}`}>
-              {task.priority === 'P0' ? 'High' : task.priority === 'P1' ? 'Medium' : 'Low'}
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getPriorityColor(task.priority || 'P2')}`}>
+              {task.priority || 'P2'}
             </span>
-            <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${task.done ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : task.status === 'in_progress' ? 'bg-amber-50 text-amber-700 border-amber-200' : task.status === 'blocked' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
-              {task.done ? 'Resolved' : task.status === 'in_progress' ? 'In Progress' : task.status === 'blocked' ? 'Blocked' : 'Pending'}
-            </span>
-            <span className="text-[11px] font-semibold text-slate-400">
-              {task.timeframe || 'No Due Date'}
-            </span>
-            {task.done && task.completedAt && (
-              <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded ml-auto">
-                Completed
+            {task.timeframe && (
+              <span className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
+                 📅 {task.timeframe}
               </span>
             )}
           </div>
         </div>
-      </div>
-      {!readOnly && (
-        <div className="flex justify-end gap-2 mt-1">
-          {onEdit && (
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {!onEdit && (
+              <button 
+                type="button"
+                aria-label={`Edit task ${task.title}`}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                className="px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded shadow-sm transition-all focus-visible:outline-none opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+                title="Edit Action Item"
+              >
+                ✏️ Edit
+              </button>
+            )}
             <button 
               type="button"
-              onClick={(e) => { e.preventDefault(); onEdit(task); }}
-              className="px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-indigo-600 bg-white border border-slate-200 rounded shadow-sm transition-all focus-visible:outline-none opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1"
-            >
-              ✏️ Edit
-            </button>
-          )}
-          <button 
-            type="button"
-            aria-label={`Transfer ownership of task ${task.title}`}
-            onClick={(e) => { e.preventDefault(); toggleTaskOwner(reporteeId, task.id); }}
-            className="px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded shadow-sm transition-all focus-visible:outline-none opacity-0 group-hover:opacity-100 focus-within:opacity-100"
-            title="Toggle Ownership"
-          >Transfer to {task.owner === 'manager' ? 'Reportee' : 'Me'}</button>
-        </div>
-      )}
+              aria-label={`Transfer ownership of task ${task.title}`}
+              onClick={async (e) => { e.preventDefault(); e.stopPropagation(); await toggleTaskOwner(reporteeId, task.id); await persistAfterMutation(); }}
+              className="px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded shadow-sm transition-all focus-visible:outline-none opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+              title="Toggle Ownership"
+            >Transfer to {task.owner === 'manager' ? 'Reportee' : 'Me'}</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export function TaskForm({ reporteeId, mockUser, teamContext, onSuccess }: { reporteeId: number; mockUser?: Reportee; teamContext?: any[]; onSuccess?: () => void }) {
   const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
   const [isManagerAction, setIsManagerAction] = useState(false);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
   const [inputValue, setInputValue] = useState("");
@@ -168,6 +162,7 @@ export function TaskForm({ reporteeId, mockUser, teamContext, onSuccess }: { rep
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reporteeId, title: inputValue.trim(), owner: isManagerAction ? "manager" : undefined }),
       });
+      await persistAfterMutation();
       // Trigger Next.js router refresh to update server components with new data
       router.refresh();
       if (onSuccess) onSuccess();

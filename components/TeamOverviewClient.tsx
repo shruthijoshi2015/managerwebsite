@@ -6,6 +6,8 @@ import { addReportee } from '@/lib/actions';
 import { TeamCard } from './TeamCard';
 import { TeamListRow } from './TeamListRow';
 import { useCardConfig } from '@/lib/CardConfigContext';
+import { useRouter } from 'next/navigation';
+import { useIndexedDB } from './IndexedDBProvider';
 import { PrepBriefPanel } from './PrepBriefPanel';
 
 type EnhancedMember = {
@@ -33,6 +35,8 @@ const COLUMNS: { key: SortKey; label: string }[] = [
 const COL_WIDTHS = [260, 200, 150, 160]; // last col is flex-1
 
 export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMember[] }) {
+  const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
   const { cardConfig } = useCardConfig();
   const [view, setView] = useState<'grid' | 'list'>(() => {
     if (typeof window !== 'undefined') {
@@ -268,8 +272,10 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
               action={async (formData) => {
                 setIsSubmitting(true);
                 await addReportee(formData);
+                await persistAfterMutation();
                 setShowAddModal(false);
                 setIsSubmitting(false);
+                router.refresh();
               }}
               className="p-5 space-y-4"
             >

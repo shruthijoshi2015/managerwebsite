@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useIndexedDB } from "./IndexedDBProvider";
 import { Target, Plus, Search, ChevronDown, ChevronRight, MoreHorizontal, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, List, User, Pencil, X, Check, Sparkles, Wand2, AlertTriangle, Calendar } from "lucide-react";
 import type { Goal } from "@/lib/db";
 import { useCardConfig } from "@/lib/CardConfigContext";
@@ -132,30 +133,40 @@ function RowMenu({ onEdit }: { onEdit: () => void }) {
 function LRow({ goal, childMap, depth=0, onEdit, onDragStart, onDragOver, onDrop, cardSize='compact' }:
   { goal: GoalRow; childMap: Record<number,GoalRow[]>; depth?: number; onEdit:(g:GoalRow)=>void;
     onDragStart:(id:number)=>void; onDragOver:(e:React.DragEvent)=>void; onDrop:(id:number)=>void; cardSize?: string }) {
+  const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
   const [expanded, setExpanded] = useState(true);
   const children = childMap[goal.id] || [];
   const p = pct(goal);
   const fmt = (d?: string) => d ? new Date(d).toISOString().slice(0, 10) : "—";
+
+  const handleStatusUpdated = async () => {
+    await persistAfterMutation();
+    router.refresh();
+  };
 
   return (
     <>
       <tr className={`border-b border-slate-100 hover:bg-slate-50/50 transition-colors group cursor-pointer ${cardSize === 'mini' ? 'text-[11px]' : cardSize === 'large' ? 'text-[14px]' : 'text-[13px]'}`}
         draggable onDragStart={() => onDragStart(goal.id)} onDragOver={onDragOver} onDrop={() => onDrop(goal.id)}>
         {/* Title */}
-        <td className={`py-${cardSize === 'mini' ? '1.5' : cardSize === 'large' ? '4' : '3'} pl-4 pr-2 min-w-0`}>
-          <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth*24}px` }}>
-            {children.length > 0
-              ? <button onClick={() => setExpanded(v=>!v)} className="p-0.5 text-slate-400 hover:text-slate-700 shrink-0">{expanded?<ChevronDown className="w-3.5 h-3.5"/>:<ChevronRight className="w-3.5 h-3.5"/>}</button>
-              : <span className="w-4 shrink-0" />}
-            <span className="text-[13px] font-medium text-slate-800 truncate max-w-xs">{goal.title}</span>
+        <td className={`py-${cardSize === 'mini' ? '1.5' : cardSize === 'large' ? '4' : '3'} pl-4 pr-3 max-w-[320px]`}>
+          <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 20}px` }}>
+            {children.length > 0 ? (
+              <button type="button" onClick={() => setExpanded(v=>!v)} className="p-0.5 rounded hover:bg-slate-200 text-slate-400 shrink-0">
+                {expanded ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
+              </button>
+            ) : <span className="w-4 shrink-0"/>}
+            <span className="cursor-grab text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><GripVertical size={13}/></span>
+            <span className="font-semibold text-slate-800 hover:text-indigo-600 truncate transition-colors cursor-pointer" onClick={() => onEdit(goal)}>{goal.title}</span>
           </div>
         </td>
         {/* User */}
         <td className={`py-${cardSize === 'mini' ? '1.5' : cardSize === 'large' ? '4' : '3'} pr-4 w-36`}>
-          <div className="flex items-center gap-2">
-            <Av name={goal.ownerName} sz={6}/>
-            <span className="text-[12px] text-slate-600 truncate max-w-[90px]">{goal.ownerName}</span>
-          </div>
+          <span className="flex items-center gap-1.5 text-slate-600 truncate">
+            <span className="w-5 h-5 rounded-full bg-slate-200 text-[10px] font-bold flex items-center justify-center shrink-0 text-slate-600">{goal.ownerName.slice(0,2).toUpperCase()}</span>
+            <span className="truncate">{goal.ownerName}</span>
+          </span>
         </td>
         {/* Progress */}
         <td className={`py-${cardSize === 'mini' ? '1.5' : cardSize === 'large' ? '4' : '3'} pr-4 w-52`}><PBar g={goal}/></td>
@@ -166,7 +177,7 @@ function LRow({ goal, childMap, depth=0, onEdit, onDragStart, onDragOver, onDrop
             {(goal.status === 'at_risk' || goal.status === 'off_track') && (
               <RiskExplanationPopover goalId={goal.id} reporteeId={goal.ownerId} />
             )}
-            <AIGoalStatusPill goalId={goal.id} reporteeId={goal.ownerId} currentStatus={goal.status} onStatusUpdated={() => window.location.reload()} />
+            <AIGoalStatusPill goalId={goal.id} reporteeId={goal.ownerId} currentStatus={goal.status} onStatusUpdated={handleStatusUpdated} />
           </div>
         </td>
         {/* Completed */}
@@ -189,6 +200,8 @@ function LRow({ goal, childMap, depth=0, onEdit, onDragStart, onDragOver, onDrop
 
 /* User view member card */
 function MCard({ m, onShowGoals, cardSize='compact' }: { m: TeamMember; onShowGoals: () => void; cardSize?: string }) {
+  const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
   const [show, setShow] = useState(false);
   const parents = m.goals.filter(g => !g.parentId);
   const overall = m.goals.length > 0 ? Math.round(m.goals.reduce((s,g) => s+g.progress,0)/m.goals.length) : 0;
@@ -196,6 +209,11 @@ function MCard({ m, onShowGoals, cardSize='compact' }: { m: TeamMember; onShowGo
   
   const pad = cardSize === 'mini' ? 'p-3' : cardSize === 'large' ? 'p-6' : 'p-5';
   
+  const handleStatusUpdated = async () => {
+    await persistAfterMutation();
+    router.refresh();
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
       <div className={`${pad} border-b border-slate-100`}>
@@ -228,7 +246,7 @@ function MCard({ m, onShowGoals, cardSize='compact' }: { m: TeamMember; onShowGo
                   {(g.status === 'at_risk' || g.status === 'off_track') && (
                     <RiskExplanationPopover goalId={g.id} reporteeId={m.id} />
                   )}
-                  <AIGoalStatusPill goalId={g.id} reporteeId={m.id} currentStatus={g.status} onStatusUpdated={() => window.location.reload()} />
+                  <AIGoalStatusPill goalId={g.id} reporteeId={m.id} currentStatus={g.status} onStatusUpdated={handleStatusUpdated} />
                 </div>
                 {g.completedAt && <span className="text-[11px] text-slate-400">{new Date(g.completedAt).toISOString().slice(0, 10)}</span>}
               </div>

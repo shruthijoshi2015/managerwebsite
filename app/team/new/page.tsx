@@ -1,8 +1,26 @@
+"use client";
+import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { addReportee } from "@/lib/actions";
+import { useIndexedDB } from "@/components/IndexedDBProvider";
 
 export default function NewReportee() {
+  const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    await addReportee(formData);
+    await persistAfterMutation();
+    router.push("/team");
+    router.refresh();
+  };
+
   return (
     <div className="p-8 max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
       <Link href="/team" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-medium">
@@ -13,7 +31,7 @@ export default function NewReportee() {
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Add New Reportee</h1>
         
-        <form action={addReportee} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1.5">
             <label htmlFor="name" className="text-sm font-medium text-slate-700">Full Name</label>
             <input type="text" id="name" name="name" required placeholder="e.g. John Doe" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow" />
@@ -33,8 +51,8 @@ export default function NewReportee() {
             <Link href="/team" className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-colors">
               Cancel
             </Link>
-            <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-shadow shadow-sm">
-              Create Profile
+            <button type="submit" disabled={isSubmitting} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-shadow shadow-sm disabled:opacity-50">
+              {isSubmitting ? "Creating..." : "Create Profile"}
             </button>
           </div>
         </form>

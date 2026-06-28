@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Search, List, LayoutGrid, CheckCircle2, Circle, AlertCircle, Clock, ChevronDown, MessageSquare, Paperclip, ArrowUpDown, ArrowUp, ArrowDown, Check, Pencil, X, Plus } from "lucide-react";
 import { ActionModal } from "./ActionModal";
+import { useIndexedDB } from "./IndexedDBProvider";
 
 type SortDir = "asc" | "desc" | null;
 type SortCol = "task" | "member" | "priority" | "status" | "timeframe" | null;
@@ -52,6 +53,8 @@ function ColHeader({ label, col, sortCol, sortDir, onSort, filterValues, activeF
 }
 
 export function ActionItemsClient({ team }: { team: any[] }) {
+  const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -73,6 +76,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTeam, setFilterTeam] = useState(searchParams.get('user') || 'All');
   const [showActionModal, setShowActionModal] = useState(false);
+  const [localStatusOverrides, setLocalStatusOverrides] = useState<Record<string, string>>({});
 
   // Edit Action Item State
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -90,6 +94,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
   const handleToggleStatus = async (item: any, e: React.MouseEvent) => {
     e.stopPropagation();
     const newStatus = item.status === 'resolved' ? 'pending' : 'resolved';
+    setLocalStatusOverrides(prev => ({ ...prev, [item.id]: newStatus }));
     try {
       await fetch("/api/update-action-item", {
         method: "POST",
@@ -100,7 +105,8 @@ export function ActionItemsClient({ team }: { team: any[] }) {
           status: newStatus
         })
       });
-      window.location.reload();
+      await persistAfterMutation();
+      router.refresh();
     } catch (err) {
       console.error(err);
     }
@@ -174,8 +180,11 @@ export function ActionItemsClient({ team }: { team: any[] }) {
         });
       }
     });
-    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [team]);
+    return items.map(item => ({
+      ...item,
+      status: localStatusOverrides[item.id] || item.status
+    })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [team, localStatusOverrides]);
 
   const memberValues = useMemo(() => [...new Set(allActionItems.map(i => i.member.name))], [allActionItems]);
   const priorityValues = useMemo(() => [...new Set(allActionItems.map(i => i.priority))], [allActionItems]);
@@ -313,7 +322,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
 
       {/* Views */}
       {view === 'list' && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm min-h-[350px] overflow-visible animate-in fade-in duration-200">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[12px] font-bold text-slate-500 uppercase tracking-wider">
@@ -327,7 +336,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredItems.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                <tr key={item.id} onClick={() => handleEditClick(item)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-3">
                       <button type="button" onClick={(e) => handleToggleStatus(item, e)} className="mt-0.5 p-0.5 hover:scale-110 transition-transform cursor-pointer focus:outline-none shrink-0" title={item.status === 'resolved' ? "Mark unresolved" : "Mark resolved (close)"}>
@@ -423,7 +432,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                 
                   <div className="px-4 pb-4 flex flex-col gap-3 flex-1 overflow-y-auto">
                     {group.items.map(item => (
-                      <div key={item.id} className={`bg-white border ${item.status === 'resolved' ? 'border-slate-100 opacity-60' : 'border-slate-200'} rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative`}>
+                      <div key={item.id} onClick={() => handleEditClick(item)} className={`bg-white border ${item.status === 'resolved' ? 'border-slate-100 opacity-60' : 'border-slate-200'} rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative cursor-pointer`}>
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
                             <button type="button" onClick={(e) => handleToggleStatus(item, e)} className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0 flex items-center justify-center text-white bg-white hover:border-indigo-500 transition-colors cursor-pointer focus:outline-none" title={item.status === 'resolved' ? "Mark unresolved" : "Mark resolved (close)"}>

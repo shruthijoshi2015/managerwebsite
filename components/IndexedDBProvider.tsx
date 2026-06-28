@@ -58,7 +58,7 @@ export function IndexedDBProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        await seedIndexedDB();
+        await seedIndexedDB(true);
         if (cancelled) return;
         const ts = await getLastSyncTimestamp();
         setLastSync(ts);
