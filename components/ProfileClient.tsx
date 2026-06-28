@@ -15,7 +15,7 @@ export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { repor
   
   return (
     <div key={task.id} tabIndex={0} className={`flex flex-col gap-2 py-3 px-3 border-b last:border-0 border-slate-100 transition-all focus-within:ring-1 focus-within:ring-slate-200 focus-visible:outline-none ${task.owner === 'manager' ? 'bg-slate-50/50' : 'bg-white'}`}>
-      <label className="flex items-start gap-3 w-full cursor-pointer group">
+      <div className="flex items-start gap-3 w-full group">
         <div className="relative flex items-start pt-0.5 shrink-0">
           <input 
             type="checkbox" 
@@ -31,11 +31,33 @@ export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { repor
             <span className={`text-[13px] font-medium leading-snug ${task.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
               {task.title}
             </span>
-            {task.owner === 'manager' && <span className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-slate-100 text-slate-600 rounded-sm shrink-0 whitespace-nowrap">My Action</span>}
+            {task.owner === 'manager' && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit?.(task); }}
+                className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-sm shrink-0 whitespace-nowrap cursor-pointer transition-colors border border-transparent hover:border-indigo-200"
+                title="Click to edit action item"
+              >
+                My Action
+              </button>
+            )}
+            {!readOnly && onEdit && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(task); }}
+                className="p-1 text-slate-400 hover:text-indigo-600 rounded transition-colors inline-flex items-center ml-1"
+                title="Edit Action Item"
+              >
+                ✏️
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${getPriorityColor(task.priority || 'P2')}`}>
               {task.priority === 'P0' ? 'High' : task.priority === 'P1' ? 'Medium' : 'Low'}
+            </span>
+            <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${task.done ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : task.status === 'in_progress' ? 'bg-amber-50 text-amber-700 border-amber-200' : task.status === 'blocked' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
+              {task.done ? 'Resolved' : task.status === 'in_progress' ? 'In Progress' : task.status === 'blocked' ? 'Blocked' : 'Pending'}
             </span>
             <span className="text-[11px] font-semibold text-slate-400">
               {task.timeframe || 'No Due Date'}
@@ -47,7 +69,7 @@ export function TaskItem({ reporteeId, task, readOnly = false, onEdit }: { repor
             )}
           </div>
         </div>
-      </label>
+      </div>
       {!readOnly && (
         <div className="flex justify-end gap-2 mt-1">
           {onEdit && (

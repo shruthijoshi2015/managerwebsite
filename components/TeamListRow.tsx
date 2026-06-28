@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Crown } from 'lucide-react';
 
 export type TeamListRowProps = {
   member: {
@@ -15,6 +15,7 @@ export type TeamListRowProps = {
     goalsProgressAvg: number;
     overdueTasksCount?: number;
     checkInCount?: number;
+    isManager?: boolean;
   };
   config: {
     showProgressTrend?: boolean;
@@ -77,6 +78,7 @@ function getTrendText(id: number, activeGoalsCount: number, activeTasksCount: nu
 }
 
 export function TeamListRow({ member, config, onPrep }: TeamListRowProps) {
+  const isManagerMember = member.isManager || member.role?.toLowerCase().includes("manager") || member.id === 999;
   const initials = member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   const overdue = member.overdueTasksCount ?? (member.id % 3 === 0 ? 2 : 0);
   const statusInfo = getStatusInfo(member.goalsProgressAvg, overdue);
@@ -141,7 +143,7 @@ export function TeamListRow({ member, config, onPrep }: TeamListRowProps) {
       case 'showMeetingDates':
         if (config.showMeetingDates === false) return null;
         return (
-          <div key={key} className="px-4 shrink-0 flex items-center justify-between gap-2" style={{ width: 120 }}>
+          <div key={key} className="px-4 shrink-0 flex items-center justify-between gap-2" style={{ width: 170 }}>
             <div>
               <div className={`text-[13.5px] font-semibold ${isOverdueReview ? 'text-rose-600' : 'text-slate-800'}`}>
                 {nextDate}
@@ -199,8 +201,15 @@ export function TeamListRow({ member, config, onPrep }: TeamListRowProps) {
         >
           {initials}
         </div>
-        <div className="min-w-0">
-          <div className="text-[13.5px] font-semibold text-slate-900 leading-tight truncate">{member.name}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[13.5px] font-semibold text-slate-900 leading-tight truncate">{member.name}</span>
+            {isManagerMember && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase tracking-wider border border-purple-200 shrink-0">
+                <Crown className="w-3 h-3" /> Manager
+              </span>
+            )}
+          </div>
           <div className="text-[12px] text-slate-500 leading-tight truncate">
             {member.role}
           </div>
@@ -208,7 +217,7 @@ export function TeamListRow({ member, config, onPrep }: TeamListRowProps) {
       </div>
 
       {/* STATUS column */}
-      <div className="px-4 shrink-0" style={{ width: 110 }}>
+      <div className="px-4 shrink-0" style={{ width: 150 }}>
         {statusInfo.isOverdue ? (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] font-medium bg-red-50 text-red-600 border border-red-100">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />

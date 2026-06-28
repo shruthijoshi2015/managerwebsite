@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bell, Target, Activity, Sparkles, Smile, ShieldAlert, CheckCircle2, FileText } from "lucide-react";
+import { LayoutDashboard, Users, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bell, Target, Activity, Sparkles, Smile, ShieldAlert, CheckCircle2, FileText, Database } from "lucide-react";
+import { SyncStatusIndicator } from "./OneDriveSyncModal";
 
 type TeamMember = { id: number; name: string; role: string };
 
@@ -66,6 +67,11 @@ export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMember[] }) {
          >
            {isExpanded ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
          </button>
+
+        {/* Sync Status */}
+        <div className="flex items-center justify-center mb-2">
+          <SyncStatusIndicator />
+        </div>
 
         <div className={`flex items-center justify-center px-2 py-1`}>
           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shrink-0">

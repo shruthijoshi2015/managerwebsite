@@ -6,10 +6,12 @@ import { TeamCard } from "./TeamCard";
 import { TeamListRow } from "./TeamListRow";
 import { useCardConfig, GoalModalConfig } from "@/lib/CardConfigContext";
 import { getStorageConfig, saveStorageConfig, StorageMode } from "@/lib/storageProvider";
+import { useIndexedDB } from "@/components/IndexedDBProvider";
 
 export function SettingsClient({ initialConfig }: { initialConfig: any }) {
   const [config, setConfig] = useState(initialConfig);
   const { cardConfig, setCardConfig, goalModalConfig, setGoalModalConfig, activeSettingsTab, setActiveSettingsTab } = useCardConfig();
+  const { persistAfterMutation } = useIndexedDB();
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [previewTab, setPreviewTab] = useState<'card' | 'list'>('card');
@@ -28,12 +30,15 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
     setIsSaving(true);
     await updateConfig({
       ...config,
+      cardConfig,
+      goalModalConfig,
       templates: config.templates?.map((t: any) => {
         const copy = {...t};
         delete copy._deleted;
         return copy;
       })
     });
+    await persistAfterMutation();
     setIsSaving(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -156,7 +161,7 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
   return (
     <div className="flex-1 h-full flex flex-col relative">
       {/* Header Bar */}
-      <div className="px-6 lg:px-8 pt-5 pb-0 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-4 overflow-x-auto scrollbar-none whitespace-nowrap">
+      <div className="px-6 lg:px-8 pt-3 pb-0 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-4 overflow-x-auto scrollbar-none whitespace-nowrap">
         <div className="flex gap-6 sm:gap-8 shrink-0">
           <button 
             onClick={() => setActiveTab('cardDisplay')} 
@@ -206,7 +211,7 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
         </div>
       </div>
 
-      <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full pb-24">
+      <div className="px-8 pt-6 pb-24 max-w-7xl mx-auto w-full">
         <div className="animate-in fade-in duration-300">
         
         {activeTab === 'cardDisplay' && (
@@ -547,29 +552,17 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
               Your application is configured for deployment on <strong>Vercel</strong>. Choose how your data is persisted across devices or browser sessions.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div 
                 onClick={() => {
                   const updated = { ...storageCfg, mode: 'indexedDB' as StorageMode, isConfigured: true };
                   setStorageCfg(updated);
                   saveStorageConfig(updated);
                 }}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${storageCfg.mode === 'indexedDB' ? 'border-indigo-600 bg-indigo-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${storageCfg.mode === 'indexedDB' || storageCfg.mode === 'fileSystem' ? 'border-indigo-600 bg-indigo-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}
               >
-                <div className="font-bold text-sm text-slate-900">1.1 Browser Local Storage</div>
-                <div className="text-[11px] text-slate-500 mt-1">100% private inside your browser profile. Ideal for zero-cost hosting.</div>
-              </div>
-
-              <div 
-                onClick={() => {
-                  const updated = { ...storageCfg, mode: 'fileSystem' as StorageMode, isConfigured: true };
-                  setStorageCfg(updated);
-                  saveStorageConfig(updated);
-                }}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${storageCfg.mode === 'fileSystem' ? 'border-indigo-600 bg-indigo-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                <div className="font-bold text-sm text-slate-900">1.2 Local File Sync</div>
-                <div className="text-[11px] text-slate-500 mt-1">Sync with local OneDrive or Dropbox JSON file.</div>
+                <div className="font-bold text-sm text-slate-900">1.1 Browser Storage & OneDrive Sync</div>
+                <div className="text-[11px] text-slate-500 mt-1">100% private inside your browser IndexedDB with optional live sync to a local OneDrive JSON file.</div>
               </div>
 
               <div 
@@ -580,8 +573,8 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
                 }}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${storageCfg.mode === 'cloud' ? 'border-indigo-600 bg-indigo-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}
               >
-                <div className="font-bold text-sm text-slate-900">1.3 Cloud Database</div>
-                <div className="text-[11px] text-slate-500 mt-1">Connect to Supabase (PostgreSQL) or Google Firebase.</div>
+                <div className="font-bold text-sm text-slate-900">1.2 Cloud Database Hosting</div>
+                <div className="text-[11px] text-slate-500 mt-1">Connect to Supabase (PostgreSQL) or Google Firebase for multi-user collaboration.</div>
               </div>
             </div>
 

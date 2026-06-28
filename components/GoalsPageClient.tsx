@@ -254,7 +254,17 @@ export function GoalsPageClient({ goals, teamMembers=[] }: { goals: GoalRow[]; t
       setShowNewGoal(true);
     }
   }, [searchParams]);
-  const [view, setView] = useState<"list"|"user">("list");
+  const [view, setView] = useState<"list"|"user">(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('manager_pref_goals_view');
+      if (saved === 'list' || saved === 'user') return saved;
+    }
+    return "list";
+  });
+  const handleSetView = (v: "list" | "user") => {
+    setView(v);
+    if (typeof window !== 'undefined') localStorage.setItem('manager_pref_goals_view', v);
+  };
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState(searchParams.get('user') || 'All Team');
@@ -407,7 +417,7 @@ export function GoalsPageClient({ goals, teamMembers=[] }: { goals: GoalRow[]; t
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-hidden">
       {/* Header */}
-      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
+      <div className="px-6 lg:px-8 py-3 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
         <div className="flex items-center gap-4 sm:gap-6 shrink-0">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Goals</h1>
           <div className="flex items-center gap-1">
@@ -432,7 +442,7 @@ export function GoalsPageClient({ goals, teamMembers=[] }: { goals: GoalRow[]; t
         </div>
       </div>
 
-      <div className="flex-1 px-8 py-6 space-y-5 flex flex-col overflow-hidden">
+      <div className="flex-1 px-8 pt-6 pb-4 max-w-7xl mx-auto w-full space-y-5 flex flex-col overflow-hidden">
         {/* Summary bar */}
         <div className="flex items-center gap-6 p-5 bg-white border border-slate-200 rounded-xl shadow-sm shrink-0">
           <div className="relative shrink-0">
@@ -450,7 +460,7 @@ export function GoalsPageClient({ goals, teamMembers=[] }: { goals: GoalRow[]; t
           </div>
           <div className="ml-auto flex items-center gap-1 bg-slate-100 rounded-lg p-1">
             {([["list","List view",<List key="l" className="w-3.5 h-3.5"/>],["user","User view",<User key="u" className="w-3.5 h-3.5"/>]] as [string,string,React.ReactNode][]).map(([id,label,icon])=>(
-              <button key={id} onClick={()=>setView(id as "list"|"user")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-all ${view===id?"bg-slate-900 text-white shadow-sm":"text-slate-500 hover:text-slate-800 hover:bg-white"}`}>
+              <button key={id} onClick={()=>handleSetView(id as "list"|"user")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-all ${view===id?"bg-slate-900 text-white shadow-sm":"text-slate-500 hover:text-slate-800 hover:bg-white"}`}>
                 {icon}{label}
               </button>
             ))}
@@ -519,7 +529,7 @@ export function GoalsPageClient({ goals, teamMembers=[] }: { goals: GoalRow[]; t
                 .filter(m => !isFilterActive || m.goals.some(g => !g.parentId))
                 .map(m=><MCard key={m.id} m={m} cardSize={cardSize} onShowGoals={() => {
                   setColFilters({ user: [m.name] });
-                  setView('list');
+                  handleSetView('list');
                 }}/>)}
             </div>
           </div>

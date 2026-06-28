@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Target, CheckSquare, MessageSquare, Clock } from 'lucide-react';
+import { Target, CheckSquare, MessageSquare, Clock, Crown } from 'lucide-react';
 
 export type TeamCardProps = {
   member: {
@@ -15,6 +15,7 @@ export type TeamCardProps = {
     checkInCount?: number;
     last1on1?: string;
     nextReview?: string;
+    isManager?: boolean;
   };
   config: {
     showProgressTrend?: boolean;
@@ -46,6 +47,7 @@ function generateSparkline(seed: number, points: number = 8) {
 }
 
 export function TeamCard({ member, config, onPrep }: TeamCardProps) {
+  const isManagerMember = member.isManager || member.role?.toLowerCase().includes("manager") || member.id === 999;
   const colors = getStatusColor(member.goalsProgressAvg);
   const initials = member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   
@@ -199,7 +201,14 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
                 {initials}
               </div>
               <div>
-                <h3 className={`font-semibold text-slate-900 leading-tight ${size === 'large' ? 'text-[16px]' : 'text-[14px]'}`}>{member.name}</h3>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className={`font-semibold text-slate-900 leading-tight ${size === 'large' ? 'text-[16px]' : 'text-[14px]'}`}>{member.name}</h3>
+                  {isManagerMember && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase tracking-wider border border-purple-200 shrink-0">
+                      <Crown className="w-3 h-3" /> Manager
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <p className={`text-slate-500 leading-none ${size === 'large' ? 'text-[13px]' : 'text-[12px]'}`}>{member.role}</p>
                 </div>

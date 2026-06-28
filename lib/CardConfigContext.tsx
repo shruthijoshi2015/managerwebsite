@@ -79,9 +79,41 @@ export function CardConfigProvider({
   initialConfig?: CardConfig;
   initialGoalModalConfig?: GoalModalConfig;
 }) {
-  const [cardConfig, setCardConfig] = useState<CardConfig>(initialConfig ?? defaultConfig);
-  const [goalModalConfig, setGoalModalConfig] = useState<GoalModalConfig>(initialGoalModalConfig ?? defaultGoalModalConfig);
+  const [cardConfig, setCardConfigState] = useState<CardConfig>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('manager_pref_card_config');
+      if (saved) {
+        try { return { ...defaultConfig, ...JSON.parse(saved) }; } catch (e) {}
+      }
+    }
+    return initialConfig ?? defaultConfig;
+  });
+
+  const [goalModalConfig, setGoalModalConfigState] = useState<GoalModalConfig>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('manager_pref_goal_modal_config');
+      if (saved) {
+        try { return { ...defaultGoalModalConfig, ...JSON.parse(saved) }; } catch (e) {}
+      }
+    }
+    return initialGoalModalConfig ?? defaultGoalModalConfig;
+  });
+
   const [activeSettingsTab, setActiveSettingsTab] = useState<'cardDisplay' | 'frequencies' | 'templates' | 'goals'>('cardDisplay');
+
+  const setCardConfig = (cfg: CardConfig) => {
+    setCardConfigState(cfg);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('manager_pref_card_config', JSON.stringify(cfg));
+    }
+  };
+
+  const setGoalModalConfig = (cfg: GoalModalConfig) => {
+    setGoalModalConfigState(cfg);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('manager_pref_goal_modal_config', JSON.stringify(cfg));
+    }
+  };
 
   return (
     <CardConfigContext.Provider value={{ cardConfig, setCardConfig, goalModalConfig, setGoalModalConfig, activeSettingsTab, setActiveSettingsTab }}>

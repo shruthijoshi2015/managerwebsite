@@ -762,7 +762,7 @@ export function ProfileLayoutClient({
 
   return (
     <div className="w-full flex flex-col pb-6 bg-[#fafafa]">
-      <div className="max-w-[1400px] w-full mx-auto px-6 lg:px-8 mt-6">
+      <div className="max-w-7xl w-full mx-auto px-8 mt-6">
         <PanelGroup orientation="horizontal" className="h-[calc(100vh-60px)] min-h-[500px] border-t border-slate-200">
           
           {/* MAIN COLUMN (Left) - 60% */}
@@ -892,7 +892,7 @@ export function ProfileLayoutClient({
                         onClick={() => { setEditGoal(undefined); setShowGoalModal(true); }}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
                       >
-                        Goal +
+                        <Plus className="w-3.5 h-3.5" /> Goals
                       </button>
                     </div>
                   </div>
@@ -1053,7 +1053,7 @@ export function ProfileLayoutClient({
                      onClick={() => { setEditActionTask(undefined); setShowActionModal(true); }}
                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
                    >
-                     Action +
+                     <Plus className="w-3.5 h-3.5" /> Action
                    </button>
                  </div>
 

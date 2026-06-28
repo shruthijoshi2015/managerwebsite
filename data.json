@@ -86,11 +86,16 @@
   "team": [
     {
       "id": 1,
-      "name": "Sarah Miller",
-      "role": "Frontend Engineer",
-      "email": "sarah.m@company.com",
+      "name": "Test User1",
+      "role": "Lead Software Engineer",
+      "email": "test.user1@company.com",
       "status": "Online",
-      "checkInFreq": "quarterly",
+      "checkInFreq": "weekly",
+      "isManager": false,
+      "department": "Engineering",
+      "seniority": "Lead",
+      "careerTrack": "Management",
+      "performance": "High Performer",
       "notes": [
         {
           "id": 1778084787729,
@@ -103,13 +108,56 @@
           "date": "2026-05-06T16:26:12.082Z",
           "type": "Quarterly Check-in",
           "content": "### Q1 Highlights\n\n### Goal Review\n\n### Areas of Improvement\n\n### Next Quarter Objective\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "id": 1776101245582,
+          "date": "2026-04-13T17:27:25.582Z",
+          "type": "Performance",
+          "content": "### Strength Areas\n\n### Improvement Areas\n\n### 360 Feedback Summary\n"
+        },
+        {
+          "id": 1776101197779,
+          "date": "2026-04-13T17:26:37.779Z",
+          "type": "Monthly Check-in",
+          "content": "### Monthly Highlights\n\n### Goal Review\n\n### Areas of Improvement\n\n### Next Month Objectives\n"
+        },
+        {
+          "id": 1776101185562,
+          "date": "2026-04-13T17:26:25.562Z",
+          "type": "Weekly Check-in",
+          "content": "### How are you feeling this week?\n\n### What went well since we last spoke?\n\n### Any blockers or challenges?\n\n### Action Items\n- "
+        },
+        {
+          "id": 1776502203304,
+          "date": "2026-04-18T08:50:03.304Z",
+          "type": "Monthly Check-in",
+          "content": "11"
+        },
+        {
+          "id": 1776502198303,
+          "date": "2026-04-18T08:49:58.303Z",
+          "type": "Monthly Check-in",
+          "content": "### Monthly Highlights\n1\n### Goal Review\n\n### Areas of Improvement\n\n### Next Month Objectives\n"
+        },
+        {
+          "id": 1776102394798,
+          "date": "2026-04-13T17:46:34.798Z",
+          "type": "Career Growth",
+          "content": "### Long-term Career Goals\n\n### Skills to Develop\n\n### Mentorship Needs\n\n### Next Steps\n"
         }
       ],
       "goals": [
         {
+          "id": 1782586695952,
+          "title": "Deliver Strategic Roadmap",
+          "progress": 20,
+          "total": 100,
+          "status": "on_track"
+        },
+        {
           "id": 101,
           "title": "Migrate Dashboard to React 19",
-          "progress": 90,
+          "progress": 99,
           "total": 100,
           "status": "off_track",
           "dueDate": "2026-05-20"
@@ -188,58 +236,7 @@
           "confidence": 7,
           "description": "",
           "dueDate": ""
-        }
-      ],
-      "tasks": [
-        {
-          "id": 201,
-          "title": "Review PR #4052",
-          "done": true,
-          "completedAt": "2026-04-12T10:00:00.000Z",
-          "status": "resolved",
-          "priority": "P2",
-          "timeframe": "No Due Date"
         },
-        {
-          "id": 202,
-          "title": "Update Button Component spacing",
-          "done": true,
-          "owner": "manager",
-          "completedAt": "2026-04-18T11:20:28.260Z",
-          "status": "resolved",
-          "priority": "P2",
-          "timeframe": "No Due Date"
-        }
-      ]
-    },
-    {
-      "id": 1776100920597,
-      "name": "test",
-      "role": "test",
-      "email": "tet@gmail.com",
-      "status": "Offline",
-      "checkInFreq": "bi-weekly",
-      "notes": [
-        {
-          "id": 1776101245582,
-          "date": "2026-04-13T17:27:25.582Z",
-          "type": "Performance",
-          "content": "### Strength Areas\n\n### Improvement Areas\n\n### 360 Feedback Summary\n"
-        },
-        {
-          "id": 1776101197779,
-          "date": "2026-04-13T17:26:37.779Z",
-          "type": "Monthly Check-in",
-          "content": "### Monthly Highlights\n\n### Goal Review\n\n### Areas of Improvement\n\n### Next Month Objectives\n"
-        },
-        {
-          "id": 1776101185562,
-          "date": "2026-04-13T17:26:25.562Z",
-          "type": "Weekly Check-in",
-          "content": "### How are you feeling this week?\n\n### What went well since we last spoke?\n\n### Any blockers or challenges?\n\n### Action Items\n- "
-        }
-      ],
-      "goals": [
         {
           "id": 1776101253757,
           "title": "test",
@@ -252,32 +249,7 @@
           "title": "Test workspace and increase customer experience",
           "progress": 0,
           "total": 100
-        }
-      ],
-      "tasks": []
-    },
-    {
-      "id": 1776101490320,
-      "name": "test",
-      "role": "test",
-      "email": "tet@gmail.com",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [
-        {
-          "id": 1776502203304,
-          "date": "2026-04-18T08:50:03.304Z",
-          "type": "Monthly Check-in",
-          "content": "11"
         },
-        {
-          "id": 1776502198303,
-          "date": "2026-04-18T08:49:58.303Z",
-          "type": "Monthly Check-in",
-          "content": "### Monthly Highlights\n1\n### Goal Review\n\n### Areas of Improvement\n\n### Next Month Objectives\n"
-        }
-      ],
-      "goals": [
         {
           "id": 1776101510527,
           "title": "test",
@@ -301,9 +273,42 @@
           "title": "222",
           "progress": 100,
           "total": 100
+        },
+        {
+          "id": 1776101841024,
+          "title": "tt",
+          "progress": 0,
+          "total": 100
         }
       ],
       "tasks": [
+        {
+          "id": 1782586695953,
+          "title": "Conduct Weekly Syncs",
+          "done": false,
+          "status": "pending",
+          "priority": "P0",
+          "timeframe": "This Week"
+        },
+        {
+          "id": 201,
+          "title": "Review PR #4052",
+          "done": true,
+          "completedAt": "2026-04-12T10:00:00.000Z",
+          "status": "resolved",
+          "priority": "P2",
+          "timeframe": "No Due Date"
+        },
+        {
+          "id": 202,
+          "title": "Update Button Component spacing",
+          "done": true,
+          "owner": "manager",
+          "completedAt": "2026-04-18T11:20:28.260Z",
+          "status": "resolved",
+          "priority": "P2",
+          "timeframe": "No Due Date"
+        },
         {
           "id": 1776501647925,
           "title": "STA ",
@@ -332,75 +337,7 @@
           "status": "pending",
           "priority": "P2",
           "timeframe": "No Due Date"
-        }
-      ]
-    },
-    {
-      "id": 1776101835161,
-      "name": "test",
-      "role": "test",
-      "email": "tet@gmail.com",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [
-        {
-          "id": 1776102394798,
-          "date": "2026-04-13T17:46:34.798Z",
-          "type": "Career Growth",
-          "content": "### Long-term Career Goals\n\n### Skills to Develop\n\n### Mentorship Needs\n\n### Next Steps\n"
         },
-        {
-          "id": 1776102391576,
-          "date": "2026-04-13T17:46:31.576Z",
-          "type": "Career Growth",
-          "content": "### Long-term Career Goals\n\n### Skills to Develop\n\n### Mentorship Needs\n\n### Next Steps\n"
-        },
-        {
-          "id": 1776102385853,
-          "date": "2026-04-13T17:46:25.853Z",
-          "type": "Weekly Check-in",
-          "content": "### How are you feeling this week?\n\n### What went well since we last spoke?\n\n### Any blockers or challenges?\n\n### Action Items\n- "
-        }
-      ],
-      "goals": [
-        {
-          "id": 1776101841024,
-          "title": "tt",
-          "progress": 0,
-          "total": 100
-        },
-        {
-          "id": 1776103904201,
-          "title": "ff",
-          "progress": 100,
-          "total": 100
-        },
-        {
-          "id": 1776505886843,
-          "title": "tt",
-          "progress": 0,
-          "total": 100
-        },
-        {
-          "id": 1776505894572,
-          "title": "uu",
-          "progress": 0,
-          "total": 100
-        },
-        {
-          "id": 1776505901355,
-          "title": "iopsdjfoiehfoieoifvsonsonc nboisnvios nos foseihf o osnoies onsoi ",
-          "progress": 0,
-          "total": 100
-        },
-        {
-          "id": 1776505910793,
-          "title": "fefef",
-          "progress": 0,
-          "total": 100
-        }
-      ],
-      "tasks": [
         {
           "id": 1776102093973,
           "title": "test",
@@ -458,18 +395,54 @@
           "status": "pending",
           "priority": "P2",
           "timeframe": "No Due Date"
+        },
+        {
+          "id": 1776510415707,
+          "title": "Y is this not working, can you make it work and this should be big enough to review lengthy message",
+          "done": true,
+          "owner": "manager",
+          "completedAt": "2026-05-19T16:39:10.522Z",
+          "status": "resolved",
+          "priority": "P2",
+          "timeframe": "No Due Date"
+        },
+        {
+          "id": 1776526032678,
+          "title": "jjj",
+          "done": true,
+          "owner": "reportee",
+          "completedAt": "2026-04-18T15:27:20.787Z",
+          "status": "resolved",
+          "priority": "P2",
+          "timeframe": "No Due Date"
         }
-      ],
-      "scratchpad": "test\ntest2"
+      ]
     },
     {
-      "id": 1776510165499,
-      "name": "Abhinay Kumar",
-      "role": "Software Engineer",
-      "email": "abhinaykumar413@gmail.com",
-      "status": "Offline",
-      "checkInFreq": "weekly",
+      "id": 2,
+      "name": "Test User2",
+      "role": "Senior Software Engineer",
+      "email": "test.user2@company.com",
+      "status": "Online",
+      "checkInFreq": "bi-weekly",
+      "isManager": false,
+      "department": "Engineering",
+      "seniority": "Senior",
+      "careerTrack": "Individual Contributor",
+      "performance": "High Performer",
       "notes": [
+        {
+          "id": 1776102391576,
+          "date": "2026-04-13T17:46:31.576Z",
+          "type": "Career Growth",
+          "content": "### Long-term Career Goals\n\n### Skills to Develop\n\n### Mentorship Needs\n\n### Next Steps\n"
+        },
+        {
+          "id": 1776102385853,
+          "date": "2026-04-13T17:46:25.853Z",
+          "type": "Weekly Check-in",
+          "content": "### How are you feeling this week?\n\n### What went well since we last spoke?\n\n### Any blockers or challenges?\n\n### Action Items\n- "
+        },
         {
           "id": 1780119184748,
           "date": "2026-05-30T05:33:04.749Z",
@@ -542,6 +515,36 @@
         }
       ],
       "goals": [
+        {
+          "id": 1776103904201,
+          "title": "ff",
+          "progress": 100,
+          "total": 100
+        },
+        {
+          "id": 1776505886843,
+          "title": "tt",
+          "progress": 0,
+          "total": 100
+        },
+        {
+          "id": 1776505894572,
+          "title": "uu",
+          "progress": 0,
+          "total": 100
+        },
+        {
+          "id": 1776505901355,
+          "title": "iopsdjfoiehfoieoifvsonsonc nboisnvios nos foseihf o osnoies onsoi ",
+          "progress": 0,
+          "total": 100
+        },
+        {
+          "id": 1776505910793,
+          "title": "fefef",
+          "progress": 0,
+          "total": 100
+        },
         {
           "id": 1776525992082,
           "title": "hhh",
@@ -624,26 +627,6 @@
       ],
       "tasks": [
         {
-          "id": 1776510415707,
-          "title": "Y is this not working, can you make it work and this should be big enough to review lengthy message",
-          "done": true,
-          "owner": "manager",
-          "completedAt": "2026-05-19T16:39:10.522Z",
-          "status": "resolved",
-          "priority": "P2",
-          "timeframe": "No Due Date"
-        },
-        {
-          "id": 1776526032678,
-          "title": "jjj",
-          "done": true,
-          "owner": "reportee",
-          "completedAt": "2026-04-18T15:27:20.787Z",
-          "status": "resolved",
-          "priority": "P2",
-          "timeframe": "No Due Date"
-        },
-        {
           "id": 1780060939162,
           "title": "Review latest pull requests discussed",
           "done": true,
@@ -686,20 +669,22 @@
         {
           "id": 1780119292596,
           "title": "Schedule a skip-level with director to discuss tech lead path",
-          "done": false,
+          "done": true,
           "owner": "manager",
-          "status": "pending",
+          "status": "resolved",
           "priority": "P2",
-          "timeframe": "No Due Date"
+          "timeframe": "No Due Date",
+          "completedAt": "2026-06-28T05:22:05.621Z"
         },
         {
           "id": 1780119292893,
           "title": "Ping the design lead directly regarding the accessibility modal blocker",
-          "done": false,
+          "done": true,
           "owner": "manager",
-          "status": "pending",
+          "status": "resolved",
           "priority": "P2",
-          "timeframe": "No Due Date"
+          "timeframe": "No Due Date",
+          "completedAt": "2026-06-28T05:22:07.022Z"
         },
         {
           "id": 1780119293210,
@@ -713,11 +698,12 @@
         {
           "id": 1780119293517,
           "title": "[Follow-up] Follow up on design team blocker (next Tuesday)",
-          "done": false,
+          "done": true,
           "owner": "manager",
-          "status": "pending",
+          "status": "resolved",
           "priority": "P2",
-          "timeframe": "No Due Date"
+          "timeframe": "No Due Date",
+          "completedAt": "2026-06-28T05:22:21.239Z"
         },
         {
           "id": 1780119293795,
@@ -752,7 +738,7 @@
           "done": false,
           "owner": "manager",
           "status": "pending",
-          "priority": "P2",
+          "priority": "P0",
           "timeframe": "No Due Date"
         },
         {
@@ -773,11 +759,7 @@
           "priority": "P2",
           "timeframe": "No Due Date"
         }
-      ],
-      "department": "Engineering",
-      "seniority": "Mid-Level",
-      "careerTrack": "Individual Contributor",
-      "performance": "High Performer"
+      ]
     }
   ]
 }

@@ -6,7 +6,17 @@ import { Sparkles, Calendar, MessageSquare, CheckCircle2, Circle, LayoutTemplate
 
 export function NotesHubClient({ team }: { team: any[] }) {
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'timeline' | 'board'>('timeline');
+  const [view, setView] = useState<'timeline' | 'board'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('manager_pref_notes_view');
+      if (saved === 'timeline' || saved === 'board') return saved;
+    }
+    return 'timeline';
+  });
+  const handleSetView = (v: 'timeline' | 'board') => {
+    setView(v);
+    if (typeof window !== 'undefined') localStorage.setItem('manager_pref_notes_view', v);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTeam, setFilterTeam] = useState(searchParams.get('user') || 'All');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
@@ -70,20 +80,20 @@ export function NotesHubClient({ team }: { team: any[] }) {
   return (
     <div className="flex-1 h-full flex flex-col relative bg-[#f8f9fa] overflow-y-auto">
       {/* Header */}
-      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
+      <div className="px-6 lg:px-8 py-3 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
         <div className="shrink-0">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Notes Hub</h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex bg-slate-100/80 p-1 rounded-lg shrink-0">
             <button 
-              onClick={() => setView('timeline')}
+              onClick={() => handleSetView('timeline')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all ${view === 'timeline' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <Activity className="w-3.5 h-3.5" /> Timeline View
             </button>
             <button 
-              onClick={() => setView('board')}
+              onClick={() => handleSetView('board')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all ${view === 'board' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <Columns className="w-3.5 h-3.5" /> Board View
@@ -106,16 +116,16 @@ export function NotesHubClient({ team }: { team: any[] }) {
               placeholder="Search Notes" 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1 w-full bg-white border border-slate-200 rounded-lg text-[12px] sm:text-[13px] outline-none focus:border-indigo-400 shadow-sm"
             />
           </div>
-          <Link href="/team" className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[12px] sm:text-[13px] font-semibold rounded-lg transition-colors shadow-sm shrink-0">
+          <Link href="/team" className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-lg text-[12px] sm:text-[13px] font-semibold shadow-sm transition-colors shrink-0">
+            <Plus className="w-4 h-4" />
             Add Note
           </Link>
         </div>
       </div>
 
-      <div className="p-8 max-w-6xl mx-auto pb-24 w-full">
+      <div className="px-8 pt-6 pb-24 max-w-7xl mx-auto w-full">
         {view === 'timeline' && (
         <div className="relative mt-8">
           {/* Center Timeline Line */}

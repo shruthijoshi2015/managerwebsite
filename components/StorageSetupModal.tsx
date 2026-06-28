@@ -75,59 +75,25 @@ export function StorageSetupModal() {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 text-sm">1.1 Browser Local Storage (IndexedDB)</span>
+                <span className="font-bold text-slate-900 text-sm">1.1 Browser Storage & OneDrive Sync</span>
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Recommended for Vercel
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Data is stored safely inside your browser. <strong>100% private & offline</strong>. Perfect for zero-billing Vercel hosting as data never touches a cloud database.
+                Data is stored safely inside your browser IndexedDB. <strong>100% private & offline</strong> with optional live sync to a local OneDrive JSON file.
               </p>
             </div>
             <div className="mt-1">
               <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                selectedMode === 'indexedDB' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                selectedMode === 'indexedDB' || selectedMode === 'fileSystem' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
               }`}>
-                {selectedMode === 'indexedDB' && <Check className="w-3 h-3 stroke-[3]" />}
+                {(selectedMode === 'indexedDB' || selectedMode === 'fileSystem') && <Check className="w-3 h-3 stroke-[3]" />}
               </div>
             </div>
           </div>
 
-          {/* Option 2: Local File Access */}
-          <div 
-            onClick={() => setSelectedMode('fileSystem')}
-            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
-              selectedMode === 'fileSystem' 
-                ? 'border-indigo-600 bg-indigo-50/50 shadow-sm' 
-                : 'border-slate-200 hover:border-slate-300 bg-white'
-            }`}
-          >
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-              selectedMode === 'fileSystem' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
-            }`}>
-              <HardDrive className="w-5 h-5" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 text-sm">1.2 Local File System Access</span>
-                <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Sync & Backup
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Grant permission to a `.json` database file on your computer. Place it inside OneDrive, Dropbox, or Google Drive to automatically sync across devices.
-              </p>
-            </div>
-            <div className="mt-1">
-              <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                selectedMode === 'fileSystem' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
-              }`}>
-                {selectedMode === 'fileSystem' && <Check className="w-3 h-3 stroke-[3]" />}
-              </div>
-            </div>
-          </div>
-
-          {/* Option 3: Cloud Database */}
+          {/* Option 2: Cloud Database */}
           <div 
             onClick={() => setSelectedMode('cloud')}
             className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
@@ -143,7 +109,7 @@ export function StorageSetupModal() {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 text-sm">1.3 Cloud Database Hosting</span>
+                <span className="font-bold text-slate-900 text-sm">1.2 Cloud Database Hosting</span>
                 <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Team Collaboration
                 </span>

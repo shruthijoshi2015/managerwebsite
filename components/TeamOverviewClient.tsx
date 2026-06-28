@@ -34,7 +34,17 @@ const COL_WIDTHS = [260, 200, 150, 160]; // last col is flex-1
 
 export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMember[] }) {
   const { cardConfig } = useCardConfig();
-  const [view, setView] = useState<'grid' | 'list'>('list');
+  const [view, setView] = useState<'grid' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('manager_pref_team_view');
+      if (saved === 'grid' || saved === 'list') return saved;
+    }
+    return 'list';
+  });
+  const handleSetView = (v: 'grid' | 'list') => {
+    setView(v);
+    if (typeof window !== 'undefined') localStorage.setItem('manager_pref_team_view', v);
+  };
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +80,7 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
   return (
     <div className="flex-1 h-full flex flex-col relative">
       {/* Header */}
-      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
+      <div className="px-6 lg:px-8 py-3 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
         <div className="shrink-0">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">My Team</h1>
         </div>
@@ -111,14 +121,14 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
           {/* View toggle */}
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm shrink-0">
             <button
-              onClick={() => setView('grid')}
+              onClick={() => handleSetView('grid')}
               title="Grid view"
               className={`p-1.5 rounded transition-colors ${view === 'grid' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setView('list')}
+              onClick={() => handleSetView('list')}
               title="List view"
               className={`p-1.5 rounded transition-colors ${view === 'list' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
             >
@@ -164,7 +174,7 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
             {/* STATUS */}
             <div
               className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0"
-              style={{ width: 110 }}
+              style={{ width: 150 }}
             >
               STATUS <ArrowUpDown className="w-3 h-3 inline ml-1" />
             </div>
@@ -203,7 +213,7 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
                 case 'showMeetingDates':
                   if (cardConfig.showMeetingDates === false) return null;
                   return (
-                    <button key={key} onClick={() => handleSort('next1on1')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0" style={{ width: 120 }}>
+                    <button key={key} onClick={() => handleSort('next1on1')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0" style={{ width: 170 }}>
                       NEXT 1:1 <ArrowUpDown className="w-3 h-3" />
                     </button>
                   );

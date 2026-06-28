@@ -20,7 +20,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { readDb } from "@/lib/db";
 import { CardConfigProvider } from "@/lib/CardConfigContext";
 import { CoachMeChat } from "@/components/CoachMeChat";
-import { StorageSetupModal } from "@/components/StorageSetupModal";
+import { IndexedDBProvider } from "@/components/IndexedDBProvider";
 
 export default function RootLayout({
   children,
@@ -37,12 +37,13 @@ export default function RootLayout({
     >
       <body className="bg-[#fafafa] text-slate-800 min-h-screen flex font-sans text-[13px] leading-relaxed">
         <CardConfigProvider initialConfig={db.config.cardConfig} initialGoalModalConfig={db.config.goalModalConfig}>
-          <Sidebar teamMembers={teamMembers} />
-          <main className="flex-1 overflow-y-auto h-screen">
-            {children}
-          </main>
-          <StorageSetupModal />
-          <CoachMeChat />
+          <IndexedDBProvider>
+            <Sidebar teamMembers={teamMembers} />
+            <main className="flex-1 overflow-y-auto h-screen">
+              {children}
+            </main>
+            <CoachMeChat />
+          </IndexedDBProvider>
         </CardConfigProvider>
       </body>
     </html>

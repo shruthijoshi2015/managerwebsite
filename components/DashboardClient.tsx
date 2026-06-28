@@ -21,7 +21,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Size = "sm" | "md" | "lg";
-type TabId = "me" | "team" | "org";
+type TabId = "me" | "team";
 
 interface WidgetInstance {
   instanceId: string;
@@ -1108,10 +1108,11 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
     }
   }
 
+  const isManagerUser = (m: Reportee) => m.isManager || m.role?.toLowerCase().includes("manager") || m.id === 999;
   const managerUser = useMemo(() => {
-    return team.find(m => m.isManager) || team[0] || undefined;
+    return team.find(isManagerUser) || team[0] || undefined;
   }, [team]);
-  const hasDesignatedManager = useMemo(() => team.some(m => m.isManager), [team]);
+  const hasDesignatedManager = useMemo(() => team.some(isManagerUser), [team]);
 
   function renderContent(inst: WidgetInstance): React.ReactNode {
     switch (inst.widgetId) {
@@ -1178,17 +1179,16 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-y-auto relative">
       {/* Header */}
-      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-4 overflow-x-auto scrollbar-none whitespace-nowrap">
+      <div className="px-6 lg:px-8 py-3 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-4 whitespace-nowrap relative z-50">
         <div className="shrink-0">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Tracker Dashboard</h1>
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="flex bg-slate-100/80 backdrop-blur-sm p-1 rounded-xl shadow-inner border border-slate-200 shrink-0">
-              <button onClick={() => setTab("me")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "me" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Me</button>
-              <button onClick={() => setTab("team")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "team" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Team</button>
-              <button onClick={() => setTab("org")} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition ${tab === "org" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>Org</button>
+            <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm shrink-0">
+              <button onClick={() => setTab("me")} className={`px-4 py-1.5 text-[13px] font-semibold rounded transition-colors ${tab === "me" ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600"}`}>Me</button>
+              <button onClick={() => setTab("team")} className={`px-4 py-1.5 text-[13px] font-semibold rounded transition-colors ${tab === "team" ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600"}`}>Team</button>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -1282,7 +1282,7 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
         </div>
       </div>
 
-      <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-6">
+      <div className="max-w-7xl w-full mx-auto px-8 pt-6 pb-4">
 
         {/* Grid */}
         {!hasDesignatedManager && <MissingManagerBanner team={team} />}

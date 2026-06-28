@@ -2,11 +2,11 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Search, List, LayoutGrid, CheckCircle2, Circle, AlertCircle, Clock, ChevronDown, MessageSquare, Paperclip, ArrowUpDown, ArrowUp, ArrowDown, Check, Pencil, X } from "lucide-react";
+import { Search, List, LayoutGrid, CheckCircle2, Circle, AlertCircle, Clock, ChevronDown, MessageSquare, Paperclip, ArrowUpDown, ArrowUp, ArrowDown, Check, Pencil, X, Plus } from "lucide-react";
 import { ActionModal } from "./ActionModal";
 
 type SortDir = "asc" | "desc" | null;
-type SortCol = "task" | "member" | "priority" | "status" | "noteType" | "timeframe" | null;
+type SortCol = "task" | "member" | "priority" | "status" | "timeframe" | null;
 
 /* Column Header with sort + filter */
 function ColHeader({ label, col, sortCol, sortDir, onSort, filterValues, activeFilters, onFilter }:
@@ -59,7 +59,17 @@ export function ActionItemsClient({ team }: { team: any[] }) {
     const u = searchParams.get('user');
     if (u) setFilterTeam(u);
   }, [searchParams]);
-  const [view, setView] = useState<'list' | 'grouped'>('list');
+  const [view, setView] = useState<'list' | 'grouped'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('manager_pref_actions_view');
+      if (saved === 'list' || saved === 'grouped') return saved;
+    }
+    return 'list';
+  });
+  const handleSetView = (v: 'list' | 'grouped') => {
+    setView(v);
+    if (typeof window !== 'undefined') localStorage.setItem('manager_pref_actions_view', v);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTeam, setFilterTeam] = useState(searchParams.get('user') || 'All');
   const [showActionModal, setShowActionModal] = useState(false);
@@ -75,11 +85,25 @@ export function ActionItemsClient({ team }: { team: any[] }) {
 
   const handleEditClick = (item: any) => {
     setEditingItem(item);
-    setEditTaskTitle(item.task);
-    setEditTaskAssignee(item.member.id);
-    setEditTaskPriority(item.priority);
-    setEditTaskStatus(item.status);
-    setEditTaskTimeframe(item.timeframe || "");
+  };
+
+  const handleToggleStatus = async (item: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newStatus = item.status === 'resolved' ? 'pending' : 'resolved';
+    try {
+      await fetch("/api/update-action-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: item.id,
+          reporteeId: item.member.id,
+          status: newStatus
+        })
+      });
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Sorting & Column Filtering State
@@ -125,6 +149,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                 status,
                 priority,
                 noteType: note.type,
+                owner: fUp.owner || 'reportee',
                 date: note.date,
                 member: { id: member.id, name: member.name, role: member.role, avatar: member.name.substring(0, 2).toUpperCase(), colorIndex: member.id }
               });
@@ -142,6 +167,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
             status: task.status || (task.done ? 'resolved' : 'pending'),
             priority: task.priority || 'P2',
             noteType: 'Manual Task',
+            owner: task.owner || 'reportee',
             date: task.completedAt || new Date().toISOString(),
             member: { id: member.id, name: member.name, role: member.role, avatar: member.name.substring(0, 2).toUpperCase(), colorIndex: member.id }
           });
@@ -154,7 +180,6 @@ export function ActionItemsClient({ team }: { team: any[] }) {
   const memberValues = useMemo(() => [...new Set(allActionItems.map(i => i.member.name))], [allActionItems]);
   const priorityValues = useMemo(() => [...new Set(allActionItems.map(i => i.priority))], [allActionItems]);
   const statusValues = useMemo(() => [...new Set(allActionItems.map(i => i.status))], [allActionItems]);
-  const noteTypeValues = useMemo(() => [...new Set(allActionItems.map(i => i.noteType))], [allActionItems]);
 
   const filteredItems = useMemo(() => {
     let items = allActionItems.filter(item => {
@@ -163,8 +188,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
       const matchesColMember = !colFilters.member?.length || colFilters.member.includes(item.member.name);
       const matchesColPriority = !colFilters.priority?.length || colFilters.priority.includes(item.priority);
       const matchesColStatus = !colFilters.status?.length || colFilters.status.includes(item.status);
-      const matchesColNoteType = !colFilters.noteType?.length || colFilters.noteType.includes(item.noteType);
-      return matchesSearch && matchesTeam && matchesColMember && matchesColPriority && matchesColStatus && matchesColNoteType;
+      return matchesSearch && matchesTeam && matchesColMember && matchesColPriority && matchesColStatus;
     });
 
     if (sortCol && sortDir) {
@@ -175,7 +199,6 @@ export function ActionItemsClient({ team }: { team: any[] }) {
         else if (sortCol === "member") { av = a.member.name; bv = b.member.name; }
         else if (sortCol === "priority") { av = a.priority; bv = b.priority; }
         else if (sortCol === "status") { av = a.status; bv = b.status; }
-        else if (sortCol === "noteType") { av = a.noteType; bv = b.noteType; }
         else if (sortCol === "timeframe") { av = a.timeframe; bv = b.timeframe; }
         return sortDir === "asc" ? (av < bv ? -1 : av > bv ? 1 : 0) : (av > bv ? -1 : av < bv ? 1 : 0);
       });
@@ -216,12 +239,19 @@ export function ActionItemsClient({ team }: { team: any[] }) {
     return "Pending";
   };
 
+  const getStatusBadgeClass = (s: string) => {
+    if (s === 'resolved') return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (s === 'in_progress') return "bg-amber-50 text-amber-700 border-amber-200";
+    if (s === 'blocked') return "bg-red-50 text-red-700 border-red-200";
+    return "bg-sky-50 text-sky-700 border-sky-200";
+  };
+
   if (!mounted) return null;
 
   return (
     <div className="flex-1 h-full flex flex-col relative bg-[#f8f9fa] overflow-y-auto">
       {/* Header */}
-      <div className="px-6 lg:px-8 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
+      <div className="px-6 lg:px-8 py-3 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none whitespace-nowrap">
         <div className="shrink-0">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Action Items</h1>
         </div>
@@ -229,13 +259,13 @@ export function ActionItemsClient({ team }: { team: any[] }) {
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
             <button 
-              onClick={() => setView('list')}
+              onClick={() => handleSetView('list')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all ${view === 'list' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <List className="w-3.5 h-3.5" /> List
             </button>
             <button 
-              onClick={() => setView('grouped')}
+              onClick={() => handleSetView('grouped')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all ${view === 'grouped' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <LayoutGrid className="w-3.5 h-3.5" /> Grouped
@@ -247,7 +277,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
           <div className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-lg text-[12px] sm:text-[13px] font-medium text-slate-600 shadow-sm relative shrink-0 max-w-[130px] sm:max-w-[160px]">
             <select className="appearance-none bg-transparent outline-none pr-4 w-full cursor-pointer text-ellipsis" value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
               <option value="All">Filter By Team</option>
-              {Array.from(new Set(team.map(m => m.name))).map(name => (
+              {Array.from(new Set(allActionItems.map(m => m.member.name))).map(name => (
                 <option key={name as string} value={name as string}>{name as string}</option>
               ))}
             </select>
@@ -267,14 +297,15 @@ export function ActionItemsClient({ team }: { team: any[] }) {
 
           <button 
             onClick={() => setShowActionModal(true)}
-            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] sm:text-[13px] font-bold rounded-lg transition-colors shadow-sm ml-1 shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[12px] sm:text-[13px] font-semibold rounded-lg transition-colors shadow-sm ml-1 shrink-0"
           >
-            New Task
+            <Plus className="w-4 h-4" />
+            New task
           </button>
         </div>
       </div>
 
-      <div className="p-8 max-w-[1400px] mx-auto pb-24 w-full">
+      <div className="px-8 pt-6 pb-24 max-w-7xl mx-auto w-full">
 
       {showActionModal && (
         <ActionModal team={team} onClose={() => setShowActionModal(false)} />
@@ -290,7 +321,6 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                 <th className="px-6 py-4"><ColHeader label="Assignee" col="member" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} filterValues={memberValues} activeFilters={colFilters.member} onFilter={v=>toggleColFilter("member",v)} /></th>
                 <th className="px-6 py-4"><ColHeader label="Priority" col="priority" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} filterValues={priorityValues} activeFilters={colFilters.priority} onFilter={v=>toggleColFilter("priority",v)} /></th>
                 <th className="px-6 py-4"><ColHeader label="Status" col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} filterValues={statusValues} activeFilters={colFilters.status} onFilter={v=>toggleColFilter("status",v)} /></th>
-                <th className="px-6 py-4"><ColHeader label="Source Note" col="noteType" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} filterValues={noteTypeValues} activeFilters={colFilters.noteType} onFilter={v=>toggleColFilter("noteType",v)} /></th>
                 <th className="px-6 py-4"><ColHeader label="Due / Timeframe" col="timeframe" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} /></th>
                 <th className="px-6 py-4 w-16"></th>
               </tr>
@@ -300,10 +330,17 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5">{getStatusIcon(item.status)}</div>
-                      <span className={`text-[14px] font-medium leading-snug ${item.status === 'resolved' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                        {item.task}
-                      </span>
+                      <button type="button" onClick={(e) => handleToggleStatus(item, e)} className="mt-0.5 p-0.5 hover:scale-110 transition-transform cursor-pointer focus:outline-none shrink-0" title={item.status === 'resolved' ? "Mark unresolved" : "Mark resolved (close)"}>
+                        {getStatusIcon(item.status)}
+                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[14px] font-medium leading-snug ${item.status === 'resolved' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                          {item.task}
+                        </span>
+                        {item.owner === 'manager' && (
+                          <span className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-slate-100 text-slate-600 rounded-sm shrink-0 whitespace-nowrap">My Action</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -320,13 +357,8 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-[13px] font-medium text-slate-600">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getStatusBadgeClass(item.status)}`}>
                       {getStatusText(item.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-slate-100 rounded-md text-[11px] font-semibold text-slate-600 border border-slate-200">
-                      {item.noteType}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -343,8 +375,17 @@ export function ActionItemsClient({ team }: { team: any[] }) {
               ))}
               {filteredItems.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 text-[14px]">
-                    No action items found matching your filters.
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="max-w-md mx-auto py-6">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                        <Search className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-[15px] font-bold text-slate-800 mb-1">No action items found</h3>
+                      <p className="text-[13px] text-slate-500 mb-4">No action items match your current filter or search criteria.</p>
+                      <button onClick={() => { setSearchQuery(''); setFilterTeam('All'); setColFilters({}); }} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-semibold hover:bg-slate-800 transition-colors shadow-sm">
+                        Clear all filters
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -380,41 +421,61 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                   </div>
                 </div>
                 
-                <div className="px-4 pb-4 flex flex-col gap-3 flex-1 overflow-y-auto">
-                  {group.items.map(item => (
-                    <div key={item.id} onClick={() => handleEditClick(item)} className={`bg-white border ${item.status === 'resolved' ? 'border-slate-100 opacity-60' : 'border-slate-200'} rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group`}>
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0 flex items-center justify-center text-white bg-white group-hover:border-indigo-400 transition-colors">
-                          {item.status === 'resolved' && <CheckCircle2 className="w-3 h-3 text-indigo-500" />}
+                  <div className="px-4 pb-4 flex flex-col gap-3 flex-1 overflow-y-auto">
+                    {group.items.map(item => (
+                      <div key={item.id} className={`bg-white border ${item.status === 'resolved' ? 'border-slate-100 opacity-60' : 'border-slate-200'} rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative`}>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <button type="button" onClick={(e) => handleToggleStatus(item, e)} className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0 flex items-center justify-center text-white bg-white hover:border-indigo-500 transition-colors cursor-pointer focus:outline-none" title={item.status === 'resolved' ? "Mark unresolved" : "Mark resolved (close)"}>
+                              {item.status === 'resolved' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                            </button>
+                            <div className="flex flex-col gap-1 min-w-0 flex-1">
+                              <p className={`text-[14px] font-bold leading-snug ${item.status === 'resolved' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                {item.task}
+                              </p>
+                              {item.owner === 'manager' && (
+                                <span className="w-fit px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-slate-100 text-slate-600 rounded-sm shrink-0 whitespace-nowrap">My Action</span>
+                              )}
+                            </div>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded hover:bg-slate-100 shrink-0" title="Edit Action Item">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        <p className={`text-[14px] font-bold leading-snug ${item.status === 'resolved' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                          {item.task}
-                        </p>
+                        
+                        <div className="flex items-center gap-2 mb-3 pl-7 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getPriorityColor(item.priority)}`}>
+                            {item.priority === 'P0' ? 'High' : item.priority === 'P1' ? 'Medium' : 'Low'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.status)}`}>
+                            {getStatusText(item.status)}
+                          </span>
+                          <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1 ml-auto">
+                             <Clock className="w-3 h-3" />
+                             {item.timeframe === 'No Due Date' ? 'No date' : item.timeframe}
+                          </span>
+                        </div>
+                        
+                        <div className="flex justify-end items-center gap-3 text-slate-300 mt-2">
+                          <MessageSquare className="w-4 h-4 hover:text-slate-400" />
+                          <Paperclip className="w-4 h-4 hover:text-slate-400" />
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2 mb-3 pl-7">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getPriorityColor(item.priority)}`}>
-                          {item.priority === 'P0' ? 'High' : item.priority === 'P1' ? 'Medium' : 'Low'}
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                           <Clock className="w-3 h-3" />
-                           {item.timeframe === 'No Due Date' ? 'No date' : item.timeframe}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-end items-center gap-3 text-slate-300 mt-2">
-                        <MessageSquare className="w-4 h-4 hover:text-slate-400" />
-                        <Paperclip className="w-4 h-4 hover:text-slate-400" />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+              );
+            })}
+          {filteredItems.length === 0 && (
+            <div className="w-full bg-white rounded-xl border border-slate-200 p-12 text-center my-6 max-w-xl mx-auto shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                <Search className="w-6 h-6" />
               </div>
-            );
-          })}
-          {groupedItems.length === 0 && (
-            <div className="w-full py-12 text-center text-slate-500 text-[14px]">
-              No action items found matching your filters.
+              <h3 className="text-[15px] font-bold text-slate-800 mb-1">No action items found</h3>
+              <p className="text-[13px] text-slate-500 mb-4">No action items match your current filter or search criteria.</p>
+              <button onClick={() => { setSearchQuery(''); setFilterTeam('All'); setColFilters({}); }} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-semibold hover:bg-slate-800 transition-colors shadow-sm">
+                Clear all filters
+              </button>
             </div>
           )}
         </div>
@@ -422,115 +483,19 @@ export function ActionItemsClient({ team }: { team: any[] }) {
       </div>
 
       {editingItem && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setEditingItem(null)}>
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-[500px] mx-4 relative flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-slate-200 bg-white rounded-t-xl flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-slate-500" /> Edit Action Item
-              </h3>
-              <button onClick={() => setEditingItem(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[80vh]">
-              <div>
-                <label className="block text-[13px] font-bold text-slate-700 mb-2">Assignee</label>
-                <select 
-                  value={editTaskAssignee} 
-                  onChange={e => setEditTaskAssignee(Number(e.target.value))} 
-                  className="w-full px-3 py-2 text-[14px] bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 shadow-sm"
-                >
-                  {team.map(member => (
-                    <option key={member.id} value={member.id}>{member.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-bold text-slate-700 mb-2">Description</label>
-                <textarea
-                  rows={2}
-                  value={editTaskTitle}
-                  onChange={e => setEditTaskTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-[14px] bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 shadow-sm resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[12px] font-bold text-slate-700 mb-2">Status</label>
-                  <select 
-                    value={editTaskStatus} 
-                    onChange={e => setEditTaskStatus(e.target.value)} 
-                    className="w-full px-3 py-2 text-[13px] bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 shadow-sm"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[12px] font-bold text-slate-700 mb-2">Priority</label>
-                  <select 
-                    value={editTaskPriority} 
-                    onChange={e => setEditTaskPriority(e.target.value)} 
-                    className="w-full px-3 py-2 text-[13px] bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 shadow-sm"
-                  >
-                    <option value="P0">High (P0)</option>
-                    <option value="P1">Medium (P1)</option>
-                    <option value="P2">Low (P2)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[12px] font-bold text-slate-700 mb-2">Due Date / Timeframe</label>
-                <input 
-                  type="text" 
-                  value={editTaskTimeframe}
-                  onChange={e => setEditTaskTimeframe(e.target.value)}
-                  placeholder="e.g., Oct 28"
-                  className="w-full px-3 py-2 text-[13px] bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 shadow-sm"
-                />
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-slate-200 flex justify-end gap-3 bg-white rounded-b-xl">
-              <button onClick={() => setEditingItem(null)} className="px-4 py-2 text-[13px] font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                Cancel
-              </button>
-              <button 
-                onClick={async () => {
-                  setIsUpdatingItem(true);
-                  try {
-                    await fetch("/api/update-action-item", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        itemId: editingItem.id,
-                        reporteeId: editingItem.member.id,
-                        title: editTaskTitle,
-                        status: editTaskStatus,
-                        priority: editTaskPriority,
-                        timeframe: editTaskTimeframe,
-                        newReporteeId: editTaskAssignee
-                      })
-                    });
-                    window.location.reload();
-                  } catch (e) {
-                    console.error(e);
-                  }
-                  setIsUpdatingItem(false);
-                }} 
-                disabled={isUpdatingItem || !editTaskTitle.trim()} 
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-[13px] font-bold rounded-lg transition-colors shadow-sm"
-              >
-                {isUpdatingItem ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ActionModal
+          editTask={{
+            id: editingItem.id,
+            title: editingItem.task,
+            status: editingItem.status,
+            priority: editingItem.priority,
+            timeframe: editingItem.timeframe,
+            owner: editingItem.owner || 'reportee'
+          } as any}
+          reporteeId={editingItem.member.id}
+          team={team}
+          onClose={() => setEditingItem(null)}
+        />
       )}
     </div>
   );
