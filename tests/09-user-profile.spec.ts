@@ -31,16 +31,14 @@ test.describe('👤 User Profile — Tabs, Goals, Actions, Notes, Edit', () => {
     console.log('✅ 09.2: Profile header shows name and role');
   });
 
-  test('09.3 Profile tabs: Goals, Actions, Notes are visible', async ({ page }) => {
+  test('09.3 Profile sections: Goals, Actions, Notes are visible', async ({ page }) => {
     await createUser(page, PROFILE_USER);
     await openUserProfile(page, PROFILE_USER.name);
 
-    const tabs = ['Goals', 'Actions', 'Notes'];
-    for (const tab of tabs) {
-      const tabEl = page.locator(`button:has-text("${tab}"), [role="tab"]:has-text("${tab}")`).first();
-      await expect(tabEl).toBeVisible({ timeout: 5000 });
-      console.log(`✅ 09.3: Tab "${tab}" is visible`);
-    }
+    await expect(page.locator('button:has-text("Goals"), [role="tab"]:has-text("Goals")').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('button:has-text("Actions"), [role="tab"]:has-text("Actions")').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('textarea, [placeholder*="note" i]').first()).toBeVisible({ timeout: 5000 });
+    console.log('✅ 09.3: Goals, Actions, Notes sections visible');
   });
 
   test('09.4 Clicking Goals tab shows goals section', async ({ page }) => {
@@ -67,17 +65,14 @@ test.describe('👤 User Profile — Tabs, Goals, Actions, Notes, Edit', () => {
     }
   });
 
-  test('09.6 Clicking Notes tab shows notes editor', async ({ page }) => {
+  test('09.6 Notes editor is displayed and interactive', async ({ page }) => {
     await createUser(page, PROFILE_USER);
     await openUserProfile(page, PROFILE_USER.name);
 
-    const notesTab = page.locator('button:has-text("Notes"), [role="tab"]:has-text("Notes")').first();
-    if (await notesTab.isVisible()) {
-      await notesTab.click();
-      await page.waitForTimeout(500);
-      await assertNoErrors(page);
-      console.log('✅ 09.6: Notes tab clicked without error');
-    }
+    const noteInput = page.locator('textarea, [placeholder*="note" i]').first();
+    await expect(noteInput).toBeVisible({ timeout: 5000 });
+    await assertNoErrors(page);
+    console.log('✅ 09.6: Notes editor verified visible without error');
   });
 
   test('09.7 "+ Goals" button opens goal creation modal', async ({ page }) => {

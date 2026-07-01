@@ -1,20 +1,29 @@
 "use client";
 import React, { useState } from "react";
 import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Task } from "@/lib/db";
+import { VoiceInputButton } from "@/components/VoiceInputButton";
+import { useIndexedDB } from "./IndexedDBProvider";
 
 export function ActionModal({ 
   reporteeId, 
   team,
   onClose, 
-  editTask 
+  editTask,
+  initialTitle,
+  initialDescription
 }: { 
   reporteeId?: number; 
   team?: any[];
   onClose: () => void; 
   editTask?: Task;
+  initialTitle?: string;
+  initialDescription?: string;
 }) {
-  const [title, setTitle] = useState(editTask?.title || "");
+  const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
+  const [title, setTitle] = useState(editTask?.title || initialTitle || "");
   const [status, setStatus] = useState<'pending'|'in_progress'|'resolved'>(editTask?.status || "pending");
   const [priority, setPriority] = useState<'P0'|'P1'|'P2'>(editTask?.priority || "P2");
   const [timeframe, setTimeframe] = useState(editTask?.timeframe || "");
@@ -57,6 +66,8 @@ export function ActionModal({
       await addTask(finalReporteeId, fd);
     }
     
+    await persistAfterMutation();
+    router.refresh();
     setIsSaving(false);
     onClose();
   };
@@ -91,7 +102,10 @@ export function ActionModal({
           )}
 
           <div>
-            <label className="block text-[13px] font-bold text-slate-700 mb-2">Description</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-[13px] font-bold text-slate-700">Description</label>
+              <VoiceInputButton onResult={(text) => setTitle(prev => (prev ? prev + ' ' : '') + text)} />
+            </div>
             <textarea
               autoFocus
               rows={2}

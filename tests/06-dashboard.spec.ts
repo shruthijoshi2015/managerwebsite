@@ -113,6 +113,7 @@ test.describe('🏠 Dashboard — Widgets, Tabs, Layout', () => {
     const viewAllGoals = page.locator('a[href="/goals"], a:has-text("View all goals"), a:has-text("All goals")').first();
     if (await viewAllGoals.isVisible()) {
       await viewAllGoals.click();
+      await page.waitForURL('**/goals/**', { timeout: 10000 }).catch(() => {});
       await page.waitForLoadState('networkidle');
       expect(page.url()).toContain('/goals');
       console.log('✅ 06.8: "View all goals" navigates to /goals');

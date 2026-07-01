@@ -1,16 +1,38 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bell, Target, Activity, Sparkles, Smile, ShieldAlert, CheckCircle2, FileText, Database } from "lucide-react";
-import { SyncStatusIndicator } from "./OneDriveSyncModal";
+import { LayoutDashboard, Users, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bell, Target, Activity, Sparkles, Smile, ShieldAlert, CheckCircle2, FileText, Database, BookOpen } from "lucide-react";
 
 type TeamMember = { id: number; name: string; role: string };
 
 export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMember[] }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [teamOpen, setTeamOpen] = useState(true);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const checkState = () => {
+      const saved = localStorage.getItem('manager_sidebar_expanded');
+      if (saved !== null) {
+        setIsExpanded(saved === 'true');
+      }
+    };
+    checkState();
+    window.addEventListener('sidebar-toggle', checkState);
+    window.addEventListener('storage', checkState);
+    return () => {
+      window.removeEventListener('sidebar-toggle', checkState);
+      window.removeEventListener('storage', checkState);
+    };
+  }, []);
+
+  const toggleSidebar = () => {
+    const next = !isExpanded;
+    setIsExpanded(next);
+    localStorage.setItem('manager_sidebar_expanded', String(next));
+    window.dispatchEvent(new Event('sidebar-toggle'));
+  };
 
   const getInitials = (name: string) => {
     const parts = name.split(" ").filter(w => w.length > 0);
@@ -48,7 +70,11 @@ export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMember[] }) {
         </Link>
         <Link href="/notes" className={`${linkClass} ${pathname === '/notes' ? activeClass : inactiveClass}`}>
           <FileText className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Notes</span>
+          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Check-ins</span>
+        </Link>
+        <Link href="/notebook" className={`${linkClass} ${pathname === '/notebook' ? activeClass : inactiveClass}`}>
+          <BookOpen className="w-4 h-4 shrink-0" />
+          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Notebook</span>
         </Link>
         <Link href="/actions" className={`${linkClass} ${pathname === '/actions' ? activeClass : inactiveClass}`}>
           <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -62,16 +88,12 @@ export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMember[] }) {
 
       <div className="p-4 border-t border-slate-100 mt-auto shrink-0 relative">
          <button 
-           onClick={() => setIsExpanded(!isExpanded)} 
+           onClick={toggleSidebar} 
            className="absolute -right-3 top-[-14px] bg-white border border-slate-200 shadow-sm rounded-full p-1 text-slate-400 hover:text-slate-600 transition-all z-50"
+           title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
          >
            {isExpanded ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
          </button>
-
-        {/* Sync Status */}
-        <div className="flex items-center justify-center mb-2">
-          <SyncStatusIndicator />
-        </div>
 
         <div className={`flex items-center justify-center px-2 py-1`}>
           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shrink-0">

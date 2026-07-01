@@ -44,7 +44,7 @@ test.describe('📍 Navigation — All Pages Load Without Errors', () => {
   test('01.5 Action Items (/actions) loads correctly', async ({ page }) => {
     await goToActions(page);
     await assertNoErrors(page);
-    await expect(page.locator('text=Action').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1:has-text("Action Items")')).toBeVisible({ timeout: 5000 });
     console.log('✅ Action Items page loaded');
   });
 
@@ -58,12 +58,10 @@ test.describe('📍 Navigation — All Pages Load Without Errors', () => {
   test('01.7 Team member profile (/team/[id]) loads for all existing members', async ({ page }) => {
     await goToTeam(page);
     // Collect all profile links
-    const links = await page.locator('a[href^="/team/"]').all();
-    expect(links.length).toBeGreaterThan(0);
+    const hrefs = await page.locator('a[href^="/team/"]').evaluateAll(els => els.map(e => e.getAttribute('href')).filter(h => h && h !== '/team' && !h.endsWith('/new')));
+    expect(hrefs.length).toBeGreaterThan(0);
 
-    for (const link of links) {
-      const href = await link.getAttribute('href');
-      if (!href || href === '/team') continue;
+    for (const href of hrefs) {
       await page.goto(`${BASE_URL}${href}`);
       await page.waitForLoadState('networkidle');
       await assertNoErrors(page);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutGrid, List, Search, Plus, X, Loader2, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import { addReportee } from '@/lib/actions';
 import { TeamCard } from './TeamCard';
@@ -38,13 +38,22 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
   const router = useRouter();
   const { persistAfterMutation } = useIndexedDB();
   const { cardConfig } = useCardConfig();
-  const [view, setView] = useState<'grid' | 'list'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('manager_pref_team_view');
-      if (saved === 'grid' || saved === 'list') return saved;
+  const size = cardConfig?.cardSize || 'compact';
+  let headerFields = (cardConfig?.fieldOrder || ['showGoalProgress', 'showProgressTrend', 'showWorkload', 'showMeetingDates', 'showQuickStats']).map(k => !k.startsWith('show') ? 'show' + k.charAt(0).toUpperCase() + k.slice(1) : k);
+  if (size === 'mini') {
+    headerFields = [];
+  } else if (size === 'compact') {
+    headerFields = headerFields.filter(k => k === 'showMeetingDates' || k === 'showQuickStats');
+  }
+  const [view, setView] = useState<'grid' | 'list'>('list');
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('manager_pref_team_view');
+    if (saved === 'grid' || saved === 'list') {
+      setView(saved);
     }
-    return 'list';
-  });
+  }, []);
+
   const handleSetView = (v: 'grid' | 'list') => {
     setView(v);
     if (typeof window !== 'undefined') localStorage.setItem('manager_pref_team_view', v);
@@ -184,7 +193,7 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
             </div>
 
             {/* DYNAMIC COLUMNS */}
-            {(cardConfig?.fieldOrder || ['showGoalProgress', 'showProgressTrend', 'showWorkload', 'showMeetingDates', 'showQuickStats']).map(key => {
+            {headerFields.map(key => {
               switch (key) {
                 case 'showDepartment':
                   if (cardConfig.showDepartment === false) return null;

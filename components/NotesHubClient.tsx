@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Sparkles, Calendar, MessageSquare, CheckCircle2, Circle, LayoutTemplate, Columns, Search, Filter, Plus, Activity } from "lucide-react";
+import { Sparkles, Calendar, MessageSquare, CheckCircle2, Circle, LayoutTemplate, Columns, Search, Filter, Plus, Activity, X } from "lucide-react";
+import { NotesEditor } from "@/components/NotesEditor";
 
 export function NotesHubClient({ team }: { team: any[] }) {
   const searchParams = useSearchParams();
@@ -20,6 +21,8 @@ export function NotesHubClient({ team }: { team: any[] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTeam, setFilterTeam] = useState(searchParams.get('user') || 'All');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<number>(team[0]?.id || 0);
 
   const toggleNote = (id: string) => setExpandedNotes(prev => ({...prev, [id]: !prev[id]}));
 
@@ -109,19 +112,20 @@ export function NotesHubClient({ team }: { team: any[] }) {
             </select>
             <span className="text-[10px] text-slate-400 absolute right-2.5 pointer-events-none">⌄</span>
           </div>
-          <div className="relative min-w-[120px] max-w-[160px] sm:max-w-[200px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <div className="relative min-w-[140px] max-w-[180px] sm:max-w-[220px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search Notes" 
+              placeholder="Search check-ins, notes & takeaways..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] sm:text-[13px] font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-indigo-400 shadow-sm transition-colors"
             />
           </div>
-          <Link href="/team" className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-lg text-[12px] sm:text-[13px] font-semibold shadow-sm transition-colors shrink-0">
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-lg text-[12px] sm:text-[13px] font-semibold shadow-sm transition-colors shrink-0">
             <Plus className="w-4 h-4" />
             Add Note
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -276,6 +280,38 @@ export function NotesHubClient({ team }: { team: any[] }) {
         </div>
       )}
       </div>
+
+      {showAddModal && (
+        <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-2xl h-[600px] flex flex-col overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-800 text-[15px]">Add Note for Team Member</span>
+                <select 
+                  value={selectedMemberId} 
+                  onChange={e => setSelectedMemberId(Number(e.target.value))}
+                  className="px-3 py-1 bg-white border border-slate-300 rounded-md text-[13px] font-medium text-slate-700 outline-none"
+                >
+                  {team.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {(() => {
+                const member = team.find(m => m.id === selectedMemberId) || team[0];
+                return member ? (
+                  <NotesEditor reporteeName={member.name} reporteeId={member.id} initialNotes={member.notes || []} />
+                ) : null;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

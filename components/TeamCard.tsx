@@ -16,6 +16,7 @@ export type TeamCardProps = {
     last1on1?: string;
     nextReview?: string;
     isManager?: boolean;
+    checkInFreq?: string;
   };
   config: {
     showProgressTrend?: boolean;
@@ -25,7 +26,8 @@ export type TeamCardProps = {
     showGoalProgress?: boolean;
     showDepartment?: boolean;
     fieldOrder?: string[];
-    cardSize?: 'mini' | 'compact' | 'large';
+    cardSize?: string;
+    size?: string;
   };
   onPrep?: (id: number, name: string) => void;
 };
@@ -65,7 +67,7 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
   
   const defaultFieldOrder = ['showGoalProgress', 'showProgressTrend', 'showWorkload', 'showMeetingDates', 'showQuickStats'];
   let fieldOrder = config.fieldOrder || defaultFieldOrder;
-  fieldOrder = fieldOrder.map(k => !k.startsWith('show') ? 'show' + k.charAt(0).toUpperCase() + k.slice(1) : k);
+  fieldOrder = fieldOrder.map((k: string) => !k.startsWith('show') ? 'show' + k.charAt(0).toUpperCase() + k.slice(1) : k);
   const size = config.cardSize || 'compact';
   const paddingClass = size === 'mini' ? 'p-2' : size === 'large' ? 'p-5' : 'p-3.5';
   const spaceClass = size === 'mini' ? 'space-y-1.5' : size === 'large' ? 'space-y-4' : 'space-y-3';
@@ -209,8 +211,13 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <p className={`text-slate-500 leading-none ${size === 'large' ? 'text-[13px]' : 'text-[12px]'}`}>{member.role}</p>
+                  {member.checkInFreq && (
+                    <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-indigo-100">
+                      🔄 {member.checkInFreq}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -220,7 +227,7 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
             {size !== 'mini' && (
               <div className={spaceClass}>
                 {size === 'compact'
-                  ? fieldOrder.filter(k => k === 'showMeetingDates' || k === 'showQuickStats').map(renderField)
+                  ? fieldOrder.filter((k: string) => k === 'showMeetingDates' || k === 'showQuickStats').map(renderField)
                   : fieldOrder.map(renderField)
                 }
               </div>

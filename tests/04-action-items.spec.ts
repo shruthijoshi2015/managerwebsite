@@ -19,7 +19,7 @@ test.describe('✅ Action Items — View, Create, Filter, Toggle, Sync', () => {
   test('04.1 Action Items page loads with correct layout', async ({ page }) => {
     await goToActions(page);
     await assertNoErrors(page);
-    await expect(page.locator('text=Action').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1, h2').filter({ hasText: /Action/i }).first()).toBeVisible({ timeout: 5000 });
     console.log('✅ 04.1: Action Items page loaded');
   });
 
@@ -46,7 +46,7 @@ test.describe('✅ Action Items — View, Create, Filter, Toggle, Sync', () => {
     }
   });
 
-  test('04.3 "+ New task" button opens task creation modal', async ({ page }) => {
+  test('04.3 "+ New task" button opens modal, creates task, and reflects in view', async ({ page }) => {
     await goToActions(page);
 
     const newTaskBtn = page.locator('button').filter({ hasText: /New task/i }).first();
@@ -54,14 +54,28 @@ test.describe('✅ Action Items — View, Create, Filter, Toggle, Sync', () => {
     await newTaskBtn.click();
     await page.waitForTimeout(500);
 
-    // Some form/modal should appear
-    const modal = page.locator('[role="dialog"], form, .fixed.inset-0').first();
-    const modalVisible = await modal.isVisible().catch(() => false);
-    console.log(`✅ 04.3: Task creation modal opened: ${modalVisible}`);
+    const modal = page.locator('.fixed.inset-0').first();
+    await expect(modal).toBeVisible();
 
-    if (modalVisible) {
-      await page.keyboard.press('Escape');
-    }
+    // Select a team member from modal dropdown
+    const teamSelect = modal.locator('select').first();
+    await expect(teamSelect).toBeVisible();
+    await teamSelect.selectOption({ index: 1 });
+
+    // Fill in task description inside modal
+    const titleInput = modal.locator('textarea, input[type="text"]').first();
+    const taskName = `Exhaustive Action ${TS}`;
+    await titleInput.fill(taskName);
+
+    // Save action
+    const saveBtn = modal.locator('button:has-text("Save Action")');
+    await expect(saveBtn).toBeEnabled();
+    await saveBtn.click();
+    await page.waitForTimeout(1000);
+
+    // Verify task appears on the page
+    await expect(page.locator(`text=${taskName}`).first()).toBeVisible({ timeout: 10000 });
+    console.log(`✅ 04.3: Successfully created and verified task "${taskName}" on Action Items page`);
   });
 
   test('04.4 Search bar filters action items', async ({ page }) => {
@@ -198,31 +212,35 @@ test.describe('✅ Action Items — View, Create, Filter, Toggle, Sync', () => {
     await createUser(page, ACTION_USER);
     await openUserProfile(page, ACTION_USER.name);
 
-    // Switch to Actions tab
-    const actionsTab = page.locator('button:has-text("Actions"), [role="tab"]:has-text("Actions")').first();
+    // Ensure we are on the Actions tab on the right rail
+    const actionsTab = page.locator('button[role="tab"]').filter({ hasText: /^Actions$/i }).first();
     if (await actionsTab.isVisible()) {
       await actionsTab.click();
       await page.waitForTimeout(500);
     }
 
-    // Click + Action button
-    const addActionBtn = page.locator('button:has-text("+ Action"), button:has-text("Action"), button:has-text("Add action")').first();
-    if (await addActionBtn.isVisible()) {
-      await addActionBtn.click();
-      await page.waitForTimeout(500);
+    // Click + Action button using getByRole exact match
+    const addActionBtn = page.getByRole('button', { name: 'Action', exact: true });
+    await expect(addActionBtn).toBeVisible({ timeout: 5000 });
+    await addActionBtn.click();
+    await page.waitForTimeout(500);
 
-      // Modal/form should appear
-      const titleInput = page.locator('input[name="title"], input[placeholder*="action" i], input[placeholder*="task" i]').first();
-      if (await titleInput.isVisible()) {
-        await titleInput.fill(ACTION_TITLE);
-        console.log(`✅ 04.9: Action "${ACTION_TITLE}" filled in`);
-        await page.keyboard.press('Escape');
-      } else {
-        console.log('⚠️ 04.9: Action form input not found');
-      }
-    } else {
-      console.log('⚠️ 04.9: + Action button not found in profile');
-    }
+    const modal = page.locator('.fixed.inset-0').first();
+    await expect(modal).toBeVisible();
+
+    // Fill in action description inside modal
+    const titleInput = modal.locator('textarea, input[type="text"]').first();
+    await titleInput.fill(ACTION_TITLE);
+
+    // Save Action inside modal
+    const saveBtn = modal.locator('button:has-text("Save Action")');
+    await expect(saveBtn).toBeEnabled();
+    await saveBtn.click();
+    await page.waitForTimeout(1000);
+
+    // Verify task appears on profile page
+    await expect(page.locator(`text=${ACTION_TITLE}`).first()).toBeVisible({ timeout: 10000 });
+    console.log(`✅ 04.9: Successfully created and verified Action "${ACTION_TITLE}" from Profile page`);
   });
 
   test('04.10 "My Actions" filter tab works on Action Items page', async ({ page }) => {

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { MoreVertical, X, Target, Plus, Pencil, Sparkles, Wand2, AlertTriangle, Check, ChevronDown } from "lucide-react";
+import { VoiceInputButton } from "@/components/VoiceInputButton";
+import { UserQuickScratchpad } from "@/components/UserQuickScratchpad";
 
 /* ─── Hierarchy Icon SVG ─── */
 const HierarchyIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -60,15 +62,17 @@ const STATUS_OPTIONS = [
 const ICONS = ["🚀", "🎯", "📈", "⭐", "💡", "🔥", "🏆", "🛠️", "⚡", "✨", "📊", "✅"];
 
 export function GoalModal({ 
-  reporteeId, allGoals, onClose, editGoal, initialParentId, teamMembers, onReporteeChange
+  reporteeId, allGoals, onClose, editGoal, initialParentId, teamMembers, onReporteeChange, initialTitle, initialDescription
 }: { 
   reporteeId: number; allGoals: Goal[]; onClose: () => void; editGoal?: Goal; initialParentId?: number;
   teamMembers?: { id: number; name: string }[];
   onReporteeChange?: (id: number) => void;
+  initialTitle?: string;
+  initialDescription?: string;
 }) {
   const { goalModalConfig } = useCardConfig();
-  const [title, setTitle] = useState(editGoal?.title || "");
-  const [description, setDescription] = useState(editGoal?.description || "");
+  const [title, setTitle] = useState(editGoal?.title || initialTitle || "");
+  const [description, setDescription] = useState(editGoal?.description || initialDescription || "");
   const [parentId, setParentId] = useState<string>(editGoal?.parentId?.toString() || initialParentId?.toString() || "");
   const [status, setStatus] = useState<string>(editGoal?.status || "on_track");
   
@@ -230,22 +234,6 @@ export function GoalModal({
               )}
             </div>
 
-            {teamMembers && onReporteeChange && (
-              <div className="mb-6 flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200 w-fit">
-                <span className="text-[12px] font-medium text-slate-500">Assignee:</span>
-                <select 
-                  value={reporteeId} 
-                  onChange={(e) => onReporteeChange(parseInt(e.target.value))}
-                  disabled={isEditing}
-                  className="bg-transparent text-[13px] font-semibold text-slate-800 outline-none cursor-pointer"
-                >
-                  {teamMembers.map(m => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {isAiMode ? (
               <div className="bg-fuchsia-50/50 border border-fuchsia-100 rounded-xl p-6 relative overflow-hidden mb-6">
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-fuchsia-200/40 rounded-full blur-3xl"></div>
@@ -311,6 +299,7 @@ export function GoalModal({
                         className="flex-1 w-full text-[24px] font-bold text-slate-900 outline-none placeholder:text-slate-300 bg-transparent border-0 px-0"
                         autoFocus={!isAiMode}
                       />
+                      <VoiceInputButton onResult={(text) => setTitle(prev => (prev ? prev + ' ' : '') + text)} className="mt-2" />
                       {!isEditing && (
                         <button 
                           onClick={handleMakeSmart}
@@ -325,13 +314,66 @@ export function GoalModal({
                   </div>
                 </div>
 
+            {/* Mini Mode Sleek Metadata Pill Bar */}
+            {/* Mini Mode Sleek Metadata Layout */}
+            {goalModalConfig?.size === 'mini' && (
+              <div className="flex flex-col gap-3 mb-6 pt-3 border-t border-slate-100">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 bg-indigo-50/80 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-indigo-900 border border-indigo-100 shadow-2xs">
+                    <span>👤 Assigned:</span>
+                    <select 
+                      value={reporteeId} 
+                      onChange={e => onReporteeChange?.(parseInt(e.target.value))} 
+                      disabled={isEditing || !onReporteeChange} 
+                      className="bg-transparent outline-none cursor-pointer font-bold text-indigo-700"
+                    >
+                      {teamMembers && teamMembers.length > 0 ? (
+                        teamMembers.map(m => (<option key={m.id} value={m.id}>{m.name}</option>))
+                      ) : (
+                        <option value={reporteeId}>Current Team Member</option>
+                      )}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg text-[12px] font-medium text-slate-700 border border-slate-200 shadow-2xs">
+                    <span>🎯</span>
+                    <select value={status} onChange={e => setStatus(e.target.value)} className="bg-transparent outline-none cursor-pointer font-semibold">
+                      {STATUS_OPTIONS.map(s => (<option key={s.value} value={s.value}>{s.label}</option>))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg text-[12px] font-medium text-slate-700 border border-slate-200 shadow-2xs">
+                    <span>🔥</span>
+                    <select value={priority} onChange={e => setPriority(e.target.value)} className="bg-transparent outline-none cursor-pointer font-semibold">
+                      <option value="P0">P0 - Critical</option>
+                      <option value="P1">P1 - High</option>
+                      <option value="P2">P2 - Medium</option>
+                    </select>
+                  </div>
+                </div>
+                {goalModalConfig?.showConfidence !== false && (
+                  <div className="flex items-center justify-between bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200/80">
+                    <span className="text-[12px] font-semibold text-slate-600 flex items-center gap-1.5">📊 Confidence Target:</span>
+                    <div className="flex items-center gap-2">
+                      <input type="range" min="1" max="10" value={confidence} onChange={e => setConfidence(parseInt(e.target.value))} className="w-28 accent-indigo-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                      <span className="font-bold text-[13px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{confidence}/10</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Description */}
             {goalModalConfig?.size !== 'mini' && goalModalConfig?.showDescription !== false && (
-              <textarea
-                value={description} onChange={e => setDescription(e.target.value)}
-                placeholder="Add description..."
-                className="w-full min-h-[60px] text-[14px] text-slate-800 outline-none resize-y leading-relaxed bg-transparent border-0 placeholder:text-slate-400 mb-4"
-              />
+              <div className="relative mb-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[12px] font-semibold text-slate-500">Description</span>
+                  <VoiceInputButton onResult={(text) => setDescription(prev => (prev ? prev + ' ' : '') + text)} />
+                </div>
+                <textarea
+                  value={description} onChange={e => setDescription(e.target.value)}
+                  placeholder="Add description..."
+                  className="w-full min-h-[60px] text-[14px] text-slate-800 outline-none resize-y leading-relaxed bg-slate-50 border border-slate-200 rounded-lg p-2.5 placeholder:text-slate-400"
+                />
+              </div>
             )}
 
             {/* AI Suggested Additions */}
@@ -573,6 +615,26 @@ export function GoalModal({
               </div>
             )}
 
+            {/* Assignee */}
+            {teamMembers && onReporteeChange && (
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assigned To</label>
+                <div className="relative">
+                  <select 
+                    value={reporteeId} 
+                    onChange={(e) => onReporteeChange(parseInt(e.target.value))}
+                    disabled={isEditing}
+                    className="w-full pl-3 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg font-medium text-[14px] text-slate-800 outline-none cursor-pointer appearance-none shadow-sm"
+                  >
+                    {teamMembers.map(m => (
+                      <option key={m.id} value={m.id}>👤 {m.name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">⌄</div>
+                </div>
+              </div>
+            )}
+
             {/* Confidence */}
             {goalModalConfig?.showConfidence !== false && (
               <div className="space-y-2">
@@ -644,6 +706,9 @@ export function ProfileLayoutClient({
   const [showPerfReview, setShowPerfReview] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
   const [isProfileAiOpen, setIsProfileAiOpen] = useState(false);
+  const [convertedActionTitle, setConvertedActionTitle] = useState<string | undefined>(undefined);
+  const [convertedGoalTitle, setConvertedGoalTitle] = useState<string | undefined>(undefined);
+  const [notesViewFilter, setNotesViewFilter] = useState<'all' | 'scratchpad' | 'checkin'>('checkin');
   
   // Goals Accordion State
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
@@ -784,10 +849,15 @@ export function ProfileLayoutClient({
                    className="text-left group transition-colors rounded hover:bg-slate-50 px-2 py-1 -ml-2"
                    title="Edit Profile"
                  >
-                   <h2 className="text-lg font-medium text-slate-900 flex items-center gap-1.5 leading-tight">
+                   <h2 className="text-lg font-medium text-slate-900 flex items-center gap-1.5 leading-tight flex-wrap">
                      {mockUser.name}
                      <span className="text-slate-400 font-normal">·</span>
                      <span className="text-[13px] text-slate-500 font-normal">{mockUser.role}</span>
+                     {mockUser.checkInFreq && (
+                       <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border border-indigo-100 ml-1">
+                         🔄 {mockUser.checkInFreq} Check-ins
+                       </span>
+                     )}
                    </h2>
                  </button>
                </div>
@@ -840,12 +910,39 @@ export function ProfileLayoutClient({
                 </div>
             </div>
 
-            {/* Notes Section */}
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden flex-1 flex flex-col">
-                 {NotesBlock}
+            {/* View Filter Bar for Notes Tab */}
+            <div className="flex items-center justify-between bg-slate-100/80 p-1.5 rounded-lg border border-slate-200/60 mb-4 shrink-0">
+              <div className="flex items-center gap-1">
+                <button onClick={() => setNotesViewFilter('all')} className={`px-3 py-1 text-[12px] font-semibold rounded transition ${notesViewFilter === 'all' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
+                  ✨ All Notes View
+                </button>
+                <button onClick={() => setNotesViewFilter('scratchpad')} className={`px-3 py-1 text-[12px] font-semibold rounded transition flex items-center gap-1.5 ${notesViewFilter === 'scratchpad' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
+                  ⚡ Quick Scratchpad Only
+                </button>
+                <button onClick={() => setNotesViewFilter('checkin')} className={`px-3 py-1 text-[12px] font-semibold rounded transition flex items-center gap-1.5 ${notesViewFilter === 'checkin' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
+                  💬 Check-in Notes Only
+                </button>
               </div>
             </div>
+
+            {/* Quick Notes Scratchpad (Design 2A) */}
+            {(notesViewFilter === 'all' || notesViewFilter === 'scratchpad') && (
+              <UserQuickScratchpad 
+                reporteeId={mockUser.id} 
+                reporteeName={mockUser.name}
+                onConvertToAction={(text) => { setEditActionTask(undefined); setConvertedActionTitle(text); setShowActionModal(true); }}
+                onConvertToGoal={(text) => { setEditGoal(undefined); setConvertedGoalTitle(text); setShowGoalModal(true); }}
+              />
+            )}
+
+            {/* Notes Section */}
+            {(notesViewFilter === 'all' || notesViewFilter === 'checkin') && (
+              <div className="flex flex-col flex-1 min-h-0">
+                <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden flex-1 flex flex-col">
+                   {NotesBlock}
+                </div>
+              </div>
+            )}
 
           </Panel>
 
@@ -857,14 +954,16 @@ export function ProfileLayoutClient({
 
           {/* RIGHT RAIL - 40% */}
           <Panel defaultSize={40} minSize={25} className="flex flex-col pl-4 h-full">
-            <div className="flex bg-slate-100 p-1 rounded-md mb-4 shrink-0">
+            <div className="flex bg-slate-100 p-1 rounded-md mb-4 shrink-0" role="tablist">
               <button 
+                role="tab"
                 onClick={() => setRightTab('tasks')} 
                 className={`flex-1 py-1.5 text-[13px] font-medium rounded-sm transition-all ${rightTab === 'tasks' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                Action Items
+                Actions
               </button>
               <button 
+                role="tab"
                 onClick={() => setRightTab('goals')} 
                 className={`flex-1 py-1.5 text-[13px] font-medium rounded-sm transition-all ${rightTab === 'goals' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
@@ -1085,7 +1184,9 @@ export function ProfileLayoutClient({
           allGoals={mockUser.goals} 
           editGoal={editGoal}
           initialParentId={initialParentId}
-          onClose={() => { setShowGoalModal(false); setEditGoal(undefined); setInitialParentId(undefined); }} 
+          initialTitle={convertedGoalTitle}
+          teamMembers={[{ id: mockUser.id, name: mockUser.name }]}
+          onClose={() => { setShowGoalModal(false); setEditGoal(undefined); setInitialParentId(undefined); setConvertedGoalTitle(undefined); }} 
         />
       )}
 
@@ -1093,7 +1194,8 @@ export function ProfileLayoutClient({
         <ActionModal
           reporteeId={mockUser.id}
           editTask={editActionTask}
-          onClose={() => { setShowActionModal(false); setEditActionTask(undefined); }}
+          initialTitle={convertedActionTitle}
+          onClose={() => { setShowActionModal(false); setEditActionTask(undefined); setConvertedActionTitle(undefined); }}
         />
       )}
       {/* Edit Profile Modal */}

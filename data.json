@@ -3,62 +3,22 @@
     "checkInFrequencies": [
       {
         "id": "weekly",
-        "label": "Weekly"
-      },
-      {
-        "id": "bi-weekly",
-        "label": "Bi-weekly"
+        "label": "Weekly Check-in"
       },
       {
         "id": "monthly",
-        "label": "Monthly"
+        "label": "Monthly Check-in"
       },
       {
         "id": "quarterly",
-        "label": "Quarterly"
+        "label": "Quarterly Check-in"
+      },
+      {
+        "id": "performance",
+        "label": "Performance Review"
       }
     ],
     "templates": [
-      {
-        "id": "t1",
-        "type": "frequency",
-        "freqId": "weekly",
-        "name": "Weekly Check-in",
-        "content": "### How are you feeling this week?\n\n### What went well since we last spoke?\n\n### Any blockers or challenges?\n\n### Action Items\n- "
-      },
-      {
-        "id": "t2",
-        "type": "frequency",
-        "freqId": "bi-weekly",
-        "name": "Bi-weekly Check-in",
-        "content": "### Progress since last sync\n\n### Challenges\n\n### Next 2 Weeks Focus\n"
-      },
-      {
-        "id": "t3",
-        "type": "frequency",
-        "freqId": "monthly",
-        "name": "Monthly Check-in",
-        "content": "### Monthly Highlights\n\n### Goal Review\n\n### Areas of Improvement\n\n### Next Month Objectives\n"
-      },
-      {
-        "id": "t4",
-        "type": "generic",
-        "name": "Career Growth",
-        "content": "### Long-term Career Goals\n\n### Skills to Develop\n\n### Mentorship Needs\n\n### Next Steps\n"
-      },
-      {
-        "id": "t5",
-        "type": "generic",
-        "name": "Performance",
-        "content": "### Strength Areas\n\n### Improvement Areas\n\n### 360 Feedback Summary\n"
-      },
-      {
-        "id": "t6",
-        "type": "frequency",
-        "freqId": "quarterly",
-        "name": "Quarterly Check-in",
-        "content": "### Q1 Highlights\n\n### Goal Review\n\n### Areas of Improvement\n\n### Next Quarter Objectives\n"
-      },
       {
         "id": "demo-ai-stress",
         "type": "generic",
@@ -67,11 +27,11 @@
       }
     ],
     "cardConfig": {
-      "showProgressTrend": false,
+      "showProgressTrend": true,
       "showWorkload": true,
       "showQuickStats": true,
       "showMeetingDates": true,
-      "showGoalProgress": false,
+      "showGoalProgress": true,
       "showDepartment": true,
       "fieldOrder": [
         "showDepartment",
@@ -80,18 +40,29 @@
         "showQuickStats",
         "showGoalProgress",
         "showProgressTrend"
-      ]
+      ],
+      "cardSize": "compact"
+    },
+    "goalModalConfig": {
+      "size": "large",
+      "showDescription": true,
+      "showParentGoal": true,
+      "showTags": true,
+      "showDueDate": true,
+      "showPriority": true,
+      "showConfidence": true,
+      "showSubgoals": true
     }
   },
   "team": [
     {
       "id": 1,
       "name": "Test User1",
-      "role": "Lead Software Engineer",
+      "role": "Engineering Manager",
       "email": "test.user1@company.com",
       "status": "Online",
       "checkInFreq": "weekly",
-      "isManager": false,
+      "isManager": true,
       "department": "Engineering",
       "seniority": "Lead",
       "careerTrack": "Management",
@@ -279,6 +250,20 @@
           "title": "tt",
           "progress": 0,
           "total": 100
+        },
+        {
+          "id": 1782753572395,
+          "title": "Auto Goal 1782753560392",
+          "progress": 0,
+          "total": 100,
+          "status": "on_track",
+          "icon": "🚀",
+          "tags": [],
+          "measurementType": "percent",
+          "measurementStart": 0,
+          "measurementTarget": 100,
+          "priority": "P0",
+          "confidence": 7
         }
       ],
       "tasks": [
@@ -415,6 +400,42 @@
           "status": "resolved",
           "priority": "P2",
           "timeframe": "No Due Date"
+        },
+        {
+          "id": 1782736987722,
+          "title": "Exhaustive Action 1782736979488",
+          "done": false,
+          "status": "pending",
+          "priority": "P2",
+          "timeframe": "No Due Date",
+          "owner": "reportee"
+        },
+        {
+          "id": 1782737250696,
+          "title": "Exhaustive Action 1782737242340",
+          "done": false,
+          "status": "pending",
+          "priority": "P2",
+          "timeframe": "No Due Date",
+          "owner": "reportee"
+        },
+        {
+          "id": 1782737931024,
+          "title": "Exhaustive Action 1782737921732",
+          "done": false,
+          "status": "pending",
+          "priority": "P2",
+          "timeframe": "No Due Date",
+          "owner": "reportee"
+        },
+        {
+          "id": 1782752655988,
+          "title": "Exhaustive Action 1782752646103",
+          "done": false,
+          "status": "pending",
+          "priority": "P2",
+          "timeframe": "No Due Date",
+          "owner": "reportee"
         }
       ]
     },
@@ -760,138 +781,6 @@
           "timeframe": "No Due Date"
         }
       ]
-    },
-    {
-      "id": 1782631592145,
-      "name": "REG01_1782631582710",
-      "role": "Regression QA",
-      "email": "reg01_1782631582710@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782631623378,
-      "name": "REG06_1782631620901",
-      "role": "IDB Sync Test",
-      "email": "reg06_1782631620901@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782631725914,
-      "name": "REG01_1782631721873",
-      "role": "Regression QA",
-      "email": "reg01_1782631721873@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782631887070,
-      "name": "REG01_1782631884513",
-      "role": "Regression QA",
-      "email": "reg01_1782631884513@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782631909076,
-      "name": "REG06_1782631906293",
-      "role": "IDB Sync Test",
-      "email": "reg06_1782631906293@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782632122865,
-      "name": "REG01_1782632116573",
-      "role": "Regression QA",
-      "email": "reg01_1782632116573@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782632149333,
-      "name": "REG06_1782632146272",
-      "role": "IDB Sync Test",
-      "email": "reg06_1782632146272@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782632724626,
-      "name": "REG01_1782632716586",
-      "role": "Regression QA",
-      "email": "reg01_1782632716586@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782632768619,
-      "name": "REG06_1782632765641",
-      "role": "IDB Sync Test",
-      "email": "reg06_1782632765641@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782632844738,
-      "name": "REG01_1782632841319",
-      "role": "Regression QA",
-      "email": "reg01_1782632841319@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
-    },
-    {
-      "id": 1782632866020,
-      "name": "REG06_1782632863457",
-      "role": "IDB Sync Test",
-      "email": "reg06_1782632863457@co.com",
-      "department": "Engineering",
-      "status": "Offline",
-      "checkInFreq": "weekly",
-      "notes": [],
-      "goals": [],
-      "tasks": []
     }
   ]
 }

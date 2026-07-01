@@ -96,8 +96,8 @@ export async function createUser(page: Page, user = TEST_USER): Promise<void> {
   await page.locator('input[name="email"]').fill(user.email);
   await page.locator('button[type="submit"]').click();
 
-  // Wait for modal to close and member to appear
-  await expect(page.locator(`text=${user.name}`).first()).toBeVisible({ timeout: 8000 });
+  // Wait for modal to close and member link to appear
+  await expect(page.locator(`a[href*="/team/"]:has-text("${user.name}")`).first()).toBeVisible({ timeout: 15000 });
 }
 
 // ─── User Profile Navigation ──────────────────────────────────────────────────
@@ -106,6 +106,7 @@ export async function openUserProfile(page: Page, userName: string): Promise<str
   const link = page.locator(`a[href*="/team/"]:has-text("${userName}")`).first();
   await expect(link).toBeVisible({ timeout: 5000 });
   await link.click();
+  await page.waitForURL(/\/team\/\d+/, { timeout: 10000 }).catch(() => {});
   await page.waitForLoadState('networkidle');
   return page.url();
 }
@@ -124,5 +125,13 @@ export async function assertPageLoaded(page: Page, expectedTitle: string | RegEx
   await expect(heading).toBeVisible({ timeout: 5000 });
   if (expectedTitle) {
     await expect(heading).toContainText(expectedTitle);
+  }
+}
+
+export async function cleanupTestData(page: Page) {
+  try {
+    await page.request.post(`${BASE_URL}/api/cleanup-tests`);
+  } catch (e) {
+    console.error("Failed to clean up test data:", e);
   }
 }

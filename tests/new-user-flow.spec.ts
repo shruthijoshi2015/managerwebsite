@@ -120,8 +120,8 @@ test.describe('New User Creation Flow', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify the profile loaded (not 404)
+    await expect(page).toHaveURL(/\/team\/\d+/);
     const currentUrl = page.url();
-    expect(currentUrl).toContain('/team/');
     expect(currentUrl).not.toBe(`${BASE_URL}/team`);
     console.log(`✅ Step 5.1: Navigated to ${currentUrl}`);
 
@@ -196,7 +196,7 @@ test.describe('New User Creation Flow', () => {
     // Open profile
     await page.locator(`a[href*="/team/"]:has-text("E2E Test User")`).first().click();
     await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/team/');
+    await expect(page).toHaveURL(/\/team\/\d+/);
     await expect(page.locator('text=E2E Test User').first()).toBeVisible({ timeout: 5000 });
     console.log('✅ E2E: Profile page opened without 404');
 

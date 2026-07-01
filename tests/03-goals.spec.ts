@@ -42,7 +42,7 @@ test.describe('🎯 Goals — Add, Edit, View, Filter, Sort', () => {
     await page.locator('button:has-text("New goal")').click();
 
     // Modal should open
-    await expect(page.locator('input[placeholder*="goal" i], input[name="title"]').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('input[placeholder*="Goal title" i], [role="dialog"] input[placeholder*="title" i]').first()).toBeVisible({ timeout: 5000 });
     console.log('✅ 03.3: New goal modal opened');
 
     // Close modal
@@ -60,7 +60,7 @@ test.describe('🎯 Goals — Add, Edit, View, Filter, Sort', () => {
     await page.waitForTimeout(500);
 
     // Fill title
-    const titleInput = page.locator('input[placeholder*="goal" i], input[name="title"], input[placeholder*="title" i]').first();
+    const titleInput = page.locator('input[placeholder*="Goal title" i], [role="dialog"] input[placeholder*="title" i]').first();
     await expect(titleInput).toBeVisible({ timeout: 5000 });
     await titleInput.fill(GOAL_TITLE);
 
@@ -143,7 +143,7 @@ test.describe('🎯 Goals — Add, Edit, View, Filter, Sort', () => {
 
     // Expected modal fields
     const expectedElements = [
-      'input[name="title"], input[placeholder*="goal" i], input[placeholder*="title" i]',
+      'input[placeholder*="Goal title" i], [role="dialog"] input[placeholder*="title" i]',
       'select, textarea, input[type="text"]',
     ];
     for (const selector of expectedElements) {
