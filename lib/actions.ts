@@ -115,7 +115,7 @@ export async function addGoal(id: number, formData: FormData) {
 
 export async function addTask(id: number, formData: FormData) {
   const db = readDb();
-  const index = db.team.findIndex(r => r.id === id);
+  const index = db.team.findIndex(r => Number(r.id) === Number(id));
   if (index !== -1) {
     db.team[index].tasks.push({
       id: Date.now(),
@@ -264,6 +264,17 @@ export async function updateReporteeProfile(id: number, data: { name?: string; r
   }
 }
 
+export async function deleteReportee(id: number) {
+  const db = readDb();
+  const target = db.team.find(r => r.id === id);
+  if (target && (target.isManager || target.role?.toLowerCase().includes("manager") || target.id === 999)) {
+    throw new Error("Cannot delete manager user");
+  }
+  db.team = db.team.filter(r => r.id !== id);
+  writeDb(db);
+  revalidatePath('/', 'layout');
+}
+
 export async function deleteGoal(reporteeId: number, goalId: number) {
   const db = readDb();
   const rIndex = db.team.findIndex(r => r.id === reporteeId);
@@ -296,12 +307,8 @@ export async function designateManagerRole(id: number | null, newManagerData?: {
       seniority: "Lead",
       careerTrack: "Management",
       notes: [],
-      goals: [
-        { id: Date.now() + 1, title: "Deliver Strategic Roadmap", progress: 20, total: 100, status: "on_track" }
-      ],
-      tasks: [
-        { id: Date.now() + 2, title: "Conduct Weekly Syncs", done: false, status: "pending", priority: "P1", timeframe: "This Week" }
-      ]
+      goals: [],
+      tasks: []
     };
     db.team.unshift(mgr);
   }

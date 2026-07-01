@@ -4,7 +4,7 @@
       "C:\\Program Files\\nodejs\\node.exe",
       "C:\\Users\\admin1\\OneDrive\\Desktop\\managerwebsite\\managerweb\\node_modules\\@playwright\\test\\cli.js",
       "test",
-      "tests/11-regression.spec.ts"
+      "tests/12-recent-changes.spec.ts"
     ],
     "configFile": "C:\\Users\\admin1\\OneDrive\\Desktop\\managerwebsite\\managerweb\\playwright.config.ts",
     "rootDir": "C:/Users/admin1/OneDrive/Desktop/managerwebsite/managerweb/tests",
@@ -22,6 +22,22 @@
     },
     "preserveOutput": "always",
     "projects": [
+      {
+        "outputDir": "C:/Users/admin1/OneDrive/Desktop/managerwebsite/managerweb/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "cleanup-teardown",
+        "name": "cleanup-teardown",
+        "testDir": "C:/Users/admin1/OneDrive/Desktop/managerwebsite/managerweb/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/global\\.teardown\\.ts/"
+        ],
+        "timeout": 45000
+      },
       {
         "outputDir": "C:/Users/admin1/OneDrive/Desktop/managerwebsite/managerweb/test-results",
         "repeatEach": 1,
@@ -68,7 +84,7 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.61.1",
-    "workers": 4,
+    "workers": 1,
     "webServer": {
       "command": "npm run dev",
       "url": "http://localhost:3000",
@@ -80,20 +96,69 @@
   },
   "suites": [
     {
-      "title": "11-regression.spec.ts",
-      "file": "11-regression.spec.ts",
+      "title": "global.teardown.ts",
+      "file": "global.teardown.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "cleanup test data",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "cleanup-teardown",
+              "projectName": "cleanup-teardown",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 143,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "🧹 Running global teardown to clean up demo data generated from automated tests...\n"
+                    },
+                    {
+                      "text": "✅ Cleanup completed: Removed 1 automated test records. Active team members: 0\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T13:29:37.622Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "05ed36a5ffdcbe241e99-020da452178f1970caf5",
+          "file": "global.teardown.ts",
+          "line": 3,
+          "column": 9
+        }
+      ]
+    },
+    {
+      "title": "12-recent-changes.spec.ts",
+      "file": "12-recent-changes.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "🐛 Regression Tests — Fixed Bug Verification",
-          "file": "11-regression.spec.ts",
-          "line": 15,
+          "title": "✨ Verification of Recent UI & Data Changes",
+          "file": "12-recent-changes.spec.ts",
+          "line": 12,
           "column": 6,
           "specs": [
             {
-              "title": "REG-01 [2026-06-28]: New user profile does not 404 after creation",
+              "title": "NEW-01: Stale demo users are filtered out on startup",
               "ok": true,
               "tags": [],
               "tests": [
@@ -108,16 +173,16 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8134,
+                      "duration": 3317,
                       "errors": [],
                       "stdout": [
                         {
-                          "text": "✅ REG-01: New user profile opens without 404\n"
+                          "text": "✅ NEW-01: Demo users correctly removed & sanitized on startup\n"
                         }
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-28T07:47:19.143Z",
+                      "startTime": "2026-07-01T13:29:10.407Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -125,13 +190,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "3b92c8670fe470a3d6ed-349fc34625c71c07789d",
-              "file": "11-regression.spec.ts",
-              "line": 18,
+              "id": "724d5ccaf4f977a2d6e1-664e692203e7d29ca314",
+              "file": "12-recent-changes.spec.ts",
+              "line": 14,
               "column": 7
             },
             {
-              "title": "REG-02 [2026-06-28]: Action Items checkbox does not trigger full page reload",
+              "title": "NEW-02: Manager Notebook has resizable sidebar, full formatting bar, and shortcuts modal",
               "ok": true,
               "tags": [],
               "tests": [
@@ -146,16 +211,16 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3305,
+                      "duration": 4134,
                       "errors": [],
                       "stdout": [
                         {
-                          "text": "⚠️ REG-02: No checkboxes found — may need existing action items\n"
+                          "text": "✅ NEW-02: Manager Notebook UI features verified\n"
                         }
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-28T07:47:28.467Z",
+                      "startTime": "2026-07-01T13:29:14.364Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -163,13 +228,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "3b92c8670fe470a3d6ed-99d2f6c1c9f0ff80da4a",
-              "file": "11-regression.spec.ts",
-              "line": 37,
+              "id": "724d5ccaf4f977a2d6e1-e9dce45d4b0573b2f7de",
+              "file": "12-recent-changes.spec.ts",
+              "line": 26,
               "column": 7
             },
             {
-              "title": "REG-03 [2026-06-28]: Clicking action item row opens modal, does NOT apply filter",
+              "title": "NEW-03: Check-in Notes toolbar has shared tools but excludes notebook-only options",
               "ok": true,
               "tags": [],
               "tests": [
@@ -184,16 +249,16 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4309,
+                      "duration": 4704,
                       "errors": [],
                       "stdout": [
                         {
-                          "text": "✅ REG-03: Search value unchanged after row click: \"\"\n"
+                          "text": "✅ NEW-03: Check-in Notes toolbar separation verified\n"
                         }
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-28T07:47:31.830Z",
+                      "startTime": "2026-07-01T13:29:18.572Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -201,13 +266,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "3b92c8670fe470a3d6ed-ac8a05b49bb3a465e76c",
-              "file": "11-regression.spec.ts",
-              "line": 61,
+              "id": "724d5ccaf4f977a2d6e1-26c40a0a8253b572cc8f",
+              "file": "12-recent-changes.spec.ts",
+              "line": 72,
               "column": 7
             },
             {
-              "title": "REG-04 [2026-06-28]: Filter dropdown visible even with single filtered row",
+              "title": "NEW-04: Rich-text interactive formatting (color picker, table insertion, image insertion) preserves editor selection and applies changes",
               "ok": true,
               "tags": [],
               "tests": [
@@ -222,19 +287,16 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4217,
+                      "duration": 6132,
                       "errors": [],
                       "stdout": [
                         {
-                          "text": "✅ REG-04: Dropdown bottom: 652px, viewport: 720px. In view: true\n"
-                        },
-                        {
-                          "text": "✅ REG-04: Filter visibility regression verified\n"
+                          "text": "✅ NEW-04: Interactive formatting controls function properly without focus/selection loss\n"
                         }
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-28T07:47:36.171Z",
+                      "startTime": "2026-07-01T13:29:23.336Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -242,13 +304,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "3b92c8670fe470a3d6ed-d064fdc06e3ca12dfdfe",
-              "file": "11-regression.spec.ts",
-              "line": 86,
+              "id": "724d5ccaf4f977a2d6e1-951b71ee0a5d2f39584c",
+              "file": "12-recent-changes.spec.ts",
+              "line": 108,
               "column": 7
             },
             {
-              "title": "REG-05 [2026-06-28]: Goals page does not use window.location.reload()",
+              "title": "NEW-05: Table dragging handle, blur hiding, and image alignment/download overlay function properly",
               "ok": true,
               "tags": [],
               "tests": [
@@ -263,16 +325,16 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2671,
+                      "duration": 6081,
                       "errors": [],
                       "stdout": [
                         {
-                          "text": "✅ REG-05: Goals page does not trigger full page reload\n"
+                          "text": "✅ NEW-05: Table dragging handle, blur hiding, and image alignment/download overlay verified\n"
                         }
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-28T07:47:40.418Z",
+                      "startTime": "2026-07-01T13:29:29.543Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -280,240 +342,9 @@
                   "status": "expected"
                 }
               ],
-              "id": "3b92c8670fe470a3d6ed-03aa13c5ad5f7af7d475",
-              "file": "11-regression.spec.ts",
-              "line": 125,
-              "column": 7
-            },
-            {
-              "title": "REG-06 [2026-06-28]: IndexedDB synced immediately after new user creation",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 45000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 6865,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✅ REG-06: \"REG06_1782632863457\" in IndexedDB immediately after creation\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-28T07:47:43.128Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "3b92c8670fe470a3d6ed-b83e2a5722700fb72c51",
-              "file": "11-regression.spec.ts",
-              "line": 147,
-              "column": 7
-            },
-            {
-              "title": "REG-07 [2026-06-28]: Dashboard does not show Org tab",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 45000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3376,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✅ REG-07: Dashboard Org tab correctly removed\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-28T07:47:50.046Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "3b92c8670fe470a3d6ed-7dda12dea64c388dcadf",
-              "file": "11-regression.spec.ts",
-              "line": 171,
-              "column": 7
-            },
-            {
-              "title": "REG-08 [2026-06-27]: Settings storage shows only 2 clear options (no duplicates)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 45000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3191,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✅ REG-08: Storage options count: 0 (expected ≤ 2)\n"
-                        },
-                        {
-                          "text": "✅ REG-08: Storage options regression verified\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-28T07:47:53.458Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "3b92c8670fe470a3d6ed-50ab002fcc81372b1548",
-              "file": "11-regression.spec.ts",
-              "line": 181,
-              "column": 7
-            },
-            {
-              "title": "REG-09 [2026-05-30]: Action Items status badges have color classes",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 45000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3162,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✅ REG-09: Colored status badge visible: true\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-28T07:47:56.684Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "3b92c8670fe470a3d6ed-bbdf6e457dee62fc70ca",
-              "file": "11-regression.spec.ts",
-              "line": 201,
-              "column": 7
-            },
-            {
-              "title": "REG-10 [2026-06-28]: Action items list resolved items at bottom and pending near deadline at top",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 45000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4090,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✅ REG-10: Action items sorted by status and deadline verified\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-28T07:47:59.884Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "3b92c8670fe470a3d6ed-31e2ab1b7f6ab0cc69a0",
-              "file": "11-regression.spec.ts",
-              "line": 215,
-              "column": 7
-            },
-            {
-              "title": "REG-11 [2026-06-28]: Clicking checkbox moves action item down without full page reload",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 45000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3158,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✅ REG-11: Checkbox click moves item without full reload\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-28T07:48:04.005Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "3b92c8670fe470a3d6ed-dd326097c434295e6b1b",
-              "file": "11-regression.spec.ts",
-              "line": 228,
+              "id": "724d5ccaf4f977a2d6e1-45f42e70cfac962988c3",
+              "file": "12-recent-changes.spec.ts",
+              "line": 183,
               "column": 7
             }
           ]
@@ -523,9 +354,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-06-28T07:47:14.195Z",
-    "duration": 53549.219,
-    "expected": 11,
+    "startTime": "2026-07-01T13:29:08.278Z",
+    "duration": 29596.190000000002,
+    "expected": 6,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

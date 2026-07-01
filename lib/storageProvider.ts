@@ -155,7 +155,13 @@ export async function connectLiveFile(): Promise<FileSystemFileHandle | null> {
     // Initial write
     const data = await getIndexedDBData();
     if (data) {
-      await writeToFileHandle(handle, data);
+      const genericPages = typeof window !== 'undefined' ? localStorage.getItem("manager_generic_notebook_pages") : null;
+      const genericFolders = typeof window !== 'undefined' ? localStorage.getItem("manager_generic_notebook_folders") : null;
+      await writeToFileHandle(handle, {
+        ...data,
+        genericNotebook: genericPages ? JSON.parse(genericPages) : undefined,
+        genericFolders: genericFolders ? JSON.parse(genericFolders) : undefined,
+      });
     }
     // Start auto-sync
     startAutoSync();
@@ -192,6 +198,12 @@ export async function restoreFromFile(): Promise<boolean> {
       return false;
     }
     await saveIndexedDBData(data);
+    if (data.genericNotebook) {
+      localStorage.setItem("manager_generic_notebook_pages", JSON.stringify(data.genericNotebook));
+    }
+    if (data.genericFolders) {
+      localStorage.setItem("manager_generic_notebook_folders", JSON.stringify(data.genericFolders));
+    }
     await setLastSyncTimestamp();
     _fileHandle = handle;
     startAutoSync();
@@ -223,7 +235,13 @@ function startAutoSync() {
     if (!_fileHandle) return;
     const data = await getIndexedDBData();
     if (data) {
-      await writeToFileHandle(_fileHandle, data);
+      const genericPages = typeof window !== 'undefined' ? localStorage.getItem("manager_generic_notebook_pages") : null;
+      const genericFolders = typeof window !== 'undefined' ? localStorage.getItem("manager_generic_notebook_folders") : null;
+      await writeToFileHandle(_fileHandle, {
+        ...data,
+        genericNotebook: genericPages ? JSON.parse(genericPages) : undefined,
+        genericFolders: genericFolders ? JSON.parse(genericFolders) : undefined,
+      });
     }
   }, 5000);
 }
@@ -242,7 +260,14 @@ export function stopAutoSync() {
 export async function exportSnapshot(): Promise<void> {
   const data = await getIndexedDBData();
   if (!data) { alert('No data to export.'); return; }
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const genericPages = typeof window !== 'undefined' ? localStorage.getItem("manager_generic_notebook_pages") : null;
+  const genericFolders = typeof window !== 'undefined' ? localStorage.getItem("manager_generic_notebook_folders") : null;
+  const exportData = {
+    ...data,
+    genericNotebook: genericPages ? JSON.parse(genericPages) : undefined,
+    genericFolders: genericFolders ? JSON.parse(genericFolders) : undefined,
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
