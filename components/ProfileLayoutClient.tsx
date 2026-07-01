@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { MoreVertical, X, Target, Plus, Pencil, Sparkles, Wand2, AlertTriangle, Check, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MoreVertical, X, Target, Plus, Pencil, Sparkles, Wand2, AlertTriangle, Check, ChevronDown, Trash2 } from "lucide-react";
 import { VoiceInputButton } from "@/components/VoiceInputButton";
 import { UserQuickScratchpad } from "@/components/UserQuickScratchpad";
 
@@ -27,7 +28,7 @@ import { PerfReviewPanel } from "./PerfReviewPanel";
 import { AgendaGenPanel } from "./AgendaGenPanel";
 import { RiskExplanationPopover } from "./RiskExplanationPopover";
 import { Reportee, TemplateConfig, Task, Goal, FreqConfig } from "@/lib/db";
-import { addGoal, updateGoal, updateReporteeProfile, deleteGoal } from "@/lib/actions";
+import { addGoal, updateGoal, updateReporteeProfile, deleteGoal, deleteReportee } from "@/lib/actions";
 import { useCardConfig } from "@/lib/CardConfigContext";
 
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
@@ -695,6 +696,8 @@ export function ProfileLayoutClient({
   frequencies: FreqConfig[];
   teamContext?: any[];
 }) {
+  const router = useRouter();
+  const isManagerUser = mockUser.isManager || mockUser.role?.toLowerCase().includes("manager") || mockUser.id === 999;
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
   const [editActionTask, setEditActionTask] = useState<any | undefined>(undefined);
@@ -971,7 +974,7 @@ export function ProfileLayoutClient({
               </button>
             </div>
 
-            <div className="flex flex-col h-full overflow-y-auto pb-4 pr-1">
+            <div className="flex flex-col flex-1 min-h-0 pb-4 pr-1">
               
               {/* Goals Section */}
               {rightTab === 'goals' && (
@@ -1272,9 +1275,27 @@ export function ProfileLayoutClient({
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100">
-              <button onClick={() => setShowEditProfile(false)} className="px-3 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
-              <button onClick={handleSaveProfile} className="px-3 py-1.5 text-[13px] font-medium bg-slate-900 text-white hover:bg-slate-800 rounded">Save Profile</button>
+            <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-100">
+              <div>
+                {!isManagerUser && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete ${mockUser.name}?`)) {
+                        await deleteReportee(mockUser.id);
+                        router.push('/team');
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-red-600 hover:bg-red-50 rounded transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete User
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowEditProfile(false)} className="px-3 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                <button onClick={handleSaveProfile} className="px-3 py-1.5 text-[13px] font-medium bg-slate-900 text-white hover:bg-slate-800 rounded">Save Profile</button>
+              </div>
             </div>
           </div>
         </div>

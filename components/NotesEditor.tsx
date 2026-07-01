@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Save, FileText, Sparkles, Loader2, MessageSquare, Clock, CheckCircle2, Trash2, Brain, Tag, Target, CalendarClock, AlertCircle, Bold, Italic, List, CheckSquare, Heading, Eye, Edit3, Columns, ListOrdered, Calendar, Minus } from "lucide-react";
+import { Save, FileText, Sparkles, Loader2, MessageSquare, Clock, CheckCircle2, Trash2, Brain, Tag, Target, CalendarClock, AlertCircle, Bold, Italic, List, CheckSquare, Heading, Eye, Edit3, Columns, ListOrdered, Calendar, Minus, Underline, Strikethrough, Link as LinkIcon, ChevronDown, Keyboard, X } from "lucide-react";
 import { saveNotes, addTask, updateGoalProgress } from "@/lib/actions";
 import { VoiceInputButton } from "@/components/VoiceInputButton";
 import { getStorageConfig } from "@/lib/storageProvider";
@@ -255,6 +255,8 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
   } | null>(null);
   const [isApplyingActions, setIsApplyingActions] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [showListMenu, setShowListMenu] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [noteSummaries, setNoteSummaries] = useState<Record<number, any>>(() => {
     // Initialize from any existing aiSummary data on notes
     const map: Record<number, any> = {};
@@ -319,6 +321,14 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
     setActiveTab('timeline');
   };
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorRef.current && editorRef.current.contains(sel.anchorNode)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
 
   useEffect(() => {
     if (editorRef.current) {
@@ -334,8 +344,46 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
   const handleExecCommand = (command: string, val: string = '') => {
     if (!editorRef.current) return;
     editorRef.current.focus();
+
+    const sel = window.getSelection();
+    if (sel) {
+      if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer)) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      } else if (sel.rangeCount === 0 || !editorRef.current.contains(sel.anchorNode)) {
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+
     if (command === 'heading') {
       document.execCommand('formatBlock', false, '<h3>');
+    } else if (command === 'createLink') {
+      const sel = window.getSelection();
+      let currentRange: Range | null = null;
+      let selectedText = '';
+      if (sel && sel.rangeCount > 0) {
+        currentRange = sel.getRangeAt(0).cloneRange();
+        selectedText = currentRange.toString();
+      } else if (savedRangeRef.current) {
+        currentRange = savedRangeRef.current.cloneRange();
+        selectedText = currentRange.toString();
+      }
+      const url = prompt('Enter link URL:', 'https://');
+      if (url) {
+        editorRef.current.focus();
+        const selAfter = window.getSelection();
+        if (selAfter && currentRange && editorRef.current.contains(currentRange.commonAncestorContainer)) {
+          selAfter.removeAllRanges();
+          selAfter.addRange(currentRange);
+        }
+        const textToDisplay = selectedText || url;
+        const linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 500;">${textToDisplay}</a>`;
+        document.execCommand('insertHTML', false, linkHtml);
+      }
     } else if (command === 'checkbox') {
       document.execCommand('insertHTML', false, '<div style="display: flex; align-items: center; gap: 8px; margin: 6px 0;"><input type="checkbox" style="cursor: pointer; width: 15px; height: 15px;" /> <span>&nbsp;</span></div>');
     } else if (command === 'completedCheckbox') {
@@ -349,26 +397,75 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
     } else {
       document.execCommand(command, false, val);
     }
-    setContent(editorRef.current.innerHTML);
+    if (editorRef.current) {
+      setContent(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+      if (e.key === 'b' || e.key === 'B') {
+        e.preventDefault();
+        handleExecCommand('bold');
+      } else if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        handleExecCommand('italic');
+      } else if (e.key === 'u' || e.key === 'U') {
+        e.preventDefault();
+        handleExecCommand('underline');
+      } else if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        handleExecCommand('createLink');
+      }
+    } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'x' || e.key === 'X')) {
+      e.preventDefault();
+      handleExecCommand('strikeThrough');
+    } else if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      setShowShortcutsModal(true);
+    }
   };
 
   const renderEditorArea = () => (
     <div className="flex-1 flex flex-col bg-white overflow-hidden h-full relative">
       {/* Formatting Toolbar */}
       <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
-        <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => handleExecCommand('bold')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Bold"><Bold className="w-4 h-4" /></button>
-          <button onClick={() => handleExecCommand('italic')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Italic"><Italic className="w-4 h-4" /></button>
+        <div className="flex items-center gap-1 shrink-0 flex-wrap">
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('bold')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Bold (Cmd+B)"><Bold className="w-4 h-4" /></button>
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('italic')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Italic (Cmd+I)"><Italic className="w-4 h-4" /></button>
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('underline')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Underline (Cmd+U)"><Underline className="w-4 h-4" /></button>
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('strikeThrough')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Strikethrough (Cmd+Shift+X)"><Strikethrough className="w-4 h-4" /></button>
           <div className="w-px h-4 bg-slate-300 mx-1" />
-          <button onClick={() => handleExecCommand('heading')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Heading"><Heading className="w-4 h-4" /></button>
-          <button onClick={() => handleExecCommand('insertUnorderedList')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Bullet List"><List className="w-4 h-4" /></button>
-          <button onClick={() => handleExecCommand('insertOrderedList')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
-          <button onClick={() => handleExecCommand('checkbox')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Task Checkbox"><CheckSquare className="w-4 h-4" /></button>
-          <button onClick={() => handleExecCommand('completedCheckbox')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Completed Task"><CheckCircle2 className="w-4 h-4 text-emerald-600" /></button>
+          
+          {/* Group Bullet Points Dropdown */}
+          <div className="relative">
+            <button 
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => setShowListMenu(!showListMenu)}
+              title="Lists & Tasks" 
+              className="flex items-center gap-1 p-1.5 hover:bg-slate-200 rounded text-slate-700 transition text-[12px] font-medium"
+            >
+              <List className="w-4 h-4" />
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showListMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 flex flex-col z-50 min-w-[140px]">
+                <button onMouseDown={e => e.preventDefault()} onClick={() => { handleExecCommand('insertUnorderedList'); setShowListMenu(false); }} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 text-[12px] text-slate-700"><List className="w-3.5 h-3.5" /> Bullet List</button>
+                <button onMouseDown={e => e.preventDefault()} onClick={() => { handleExecCommand('insertOrderedList'); setShowListMenu(false); }} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 text-[12px] text-slate-700"><ListOrdered className="w-3.5 h-3.5" /> Numbered List</button>
+                <button onMouseDown={e => e.preventDefault()} onClick={() => { handleExecCommand('checkbox'); setShowListMenu(false); }} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 text-[12px] text-slate-700"><CheckSquare className="w-3.5 h-3.5" /> Checkbox Task</button>
+              </div>
+            )}
+          </div>
+
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('completedCheckbox')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Completed Task"><CheckCircle2 className="w-4 h-4 text-emerald-600" /></button>
           <div className="w-px h-4 bg-slate-300 mx-1" />
-          <button onClick={() => handleExecCommand('callout')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Callout Box"><AlertCircle className="w-4 h-4 text-indigo-600" /></button>
-          <button onClick={() => handleExecCommand('divider')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Divider"><Minus className="w-4 h-4" /></button>
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('createLink')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Add Link (Cmd+K)"><LinkIcon className="w-4 h-4" /></button>
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('callout')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Callout Box"><AlertCircle className="w-4 h-4 text-indigo-600" /></button>
+          <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('divider')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Divider"><Minus className="w-4 h-4" /></button>
           <button onClick={() => handleExecCommand('date')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Insert Date Stamp"><Calendar className="w-4 h-4 text-amber-600" /></button>
+          
+          <div className="w-px h-4 bg-slate-300 mx-1" />
+          <button onClick={() => setShowShortcutsModal(true)} className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded text-indigo-600 transition" title="Keyboard Shortcuts (Alt+K)"><Keyboard className="w-4 h-4" /></button>
         </div>
       </div>
 
@@ -377,8 +474,12 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          onInput={(e) => setContent(e.currentTarget.innerHTML)}
-          className="w-full h-full min-h-[350px] outline-none text-slate-800 font-sans text-[14px] leading-relaxed overflow-y-auto"
+          onInput={(e) => { setContent(e.currentTarget.innerHTML); saveSelection(); }}
+          onKeyDown={handleKeyDown}
+          onKeyUp={saveSelection}
+          onMouseUp={saveSelection}
+          onClick={saveSelection}
+          className="w-full h-full min-h-[350px] outline-none text-slate-800 font-sans text-[14px] leading-relaxed"
         />
         {!content && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center flex-col text-slate-400 gap-2 opacity-50 pt-10">
@@ -790,6 +891,43 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
            <button className="text-[13px] text-slate-500 hover:text-slate-800 transition-colors font-medium">View all →</button>
         </div>
       </div>
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcutsModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-indigo-600" />
+                <h3 className="font-bold text-slate-800 text-[15px]">Keyboard Shortcuts</h3>
+              </div>
+              <button onClick={() => setShowShortcutsModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 divide-y divide-slate-100 text-[13px]">
+              {[
+                { key: 'Cmd/Ctrl + B', label: 'Toggle Bold' },
+                { key: 'Cmd/Ctrl + I', label: 'Toggle Italic' },
+                { key: 'Cmd/Ctrl + U', label: 'Toggle Underline' },
+                { key: 'Cmd/Ctrl + Shift + X', label: 'Toggle Strikethrough' },
+                { key: 'Cmd/Ctrl + K', label: 'Insert Link' },
+                { key: 'Alt + K', label: 'Show Keyboard Shortcuts' }
+              ].map((s, idx) => (
+                <div key={idx} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0">
+                  <span className="text-slate-600 font-medium">{s.label}</span>
+                  <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-700 font-mono text-[11px] font-semibold">{s.key}</kbd>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 bg-slate-50 border-t border-slate-100 text-right">
+              <button onClick={() => setShowShortcutsModal(false)} className="px-4 py-1.5 bg-indigo-600 text-white font-medium rounded-lg text-[13px] hover:bg-indigo-700 transition">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

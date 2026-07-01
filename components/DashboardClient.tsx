@@ -49,78 +49,21 @@ function mkW(widgetId: string, size: Size): WidgetInstance {
 const CS: Record<Size, string> = { sm: "col-span-1", md: "col-span-2", lg: "col-span-4" };
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
-const ME_GOALS = [
-  { id: 1, title: "Improve Team Communication", progress: 100, color: "#22c55e", status: "achieved" },
-  { id: 2, title: "Increase Website Traffic", progress: 80, color: "#84cc16", status: "on_track" },
-  { id: 3, title: "Increase Sales Pipeline", progress: 67, color: "#eab308", status: "on_track" },
-  { id: 4, title: "Enable high impact features", progress: 64, color: "#eab308", status: "at_risk" },
-  { id: 5, title: "Launch 3 New Products", progress: 100, color: "#22c55e", status: "achieved" },
-  { id: 6, title: "Achieve Company Growth", progress: 53, color: "#f97316", status: "at_risk" },
-];
+const ME_GOALS: any[] = [];
+const ME_TASKS: any[] = [];
+const MEETINGS_1ON1: any[] = [];
+const OKR_DATA: any[] = [];
+const BLOCKERS: any[] = [];
+const FEEDBACK: any[] = [];
+const KUDOS_WALL: any[] = [];
+const TIME_ALLOC: any[] = [];
+const COMPANY_UPDATES: any[] = [];
+const WAITING_ON_ME: any[] = [];
+const LEADERBOARD: any[] = [];
 
-const ME_TASKS = [
-  { id: 1, title: "Analyze Weekly Operations", done: true, due: "Apr 23", urgent: false, priority: "P2" },
-  { id: 2, title: "Weekly Review of Team", done: false, due: "Tmrw", urgent: true, priority: "P0" },
-  { id: 3, title: "Pair with Akhil on SSR", done: false, due: "Jun 15", urgent: false, priority: "P2" },
-];
-
-const MEETINGS_1ON1 = [
-  { id: 1, name: "Paras Rawat", initials: "PR", color: "#fbcfe8", textColor: "#9d174d", date: "TUE", day: "26", time: "10:00 AM" },
-  { id: 2, name: "Akhil Chauhan", initials: "AK", color: "#fde68a", textColor: "#92400e", date: "TUE", day: "26", time: "3:00 PM" },
-  { id: 3, name: "Sarah Miller", initials: "SM", color: "#bbf7d0", textColor: "#14532d", date: "WED", day: "27", time: "11:00 AM" },
-];
-
-const OKR_DATA = [
-  { objective: "Ship Q2 RMW performance release", score: 0.7 },
-  { objective: "Build self-healing team", score: 0.5 },
-];
-
-const BLOCKERS = [
-  { id: 1, title: "SSR pipeline blocked", days: 5, severity: "critical" },
-  { id: 2, title: "ACL permission issue", days: 2, severity: "moderate" },
-];
-
-const FEEDBACK = [
-  { id: 1, from: "Akhil", message: '"Great job leading the SSR investigation."', type: "Kudos" },
-  { id: 2, from: "Paras", message: '"Could use more clarity on sprint priorities."', type: "Suggestion" },
-];
-
-const KUDOS_WALL = [
-  { id: 1, quote: '"Crushed the Q2 release"', from: "Akhil", to: "Paras", emoji: "⭐", bg: "from-amber-50 to-orange-50" },
-  { id: 2, quote: '"Great mentorship"', from: "Sarah", to: "Abhinay", emoji: "🚀", bg: "from-emerald-50 to-teal-50" },
-  { id: 3, quote: '"Best PR review I\'ve seen"', from: "Team", to: "Akhil", emoji: "💎", bg: "from-violet-50 to-purple-50" },
-];
-
-const TIME_ALLOC = [
-  { label: "Meetings", pct: 35, color: "#3b82f6" },
-  { label: "Deep work", pct: 28, color: "#10b981" },
-  { label: "Reviews", pct: 18, color: "#f59e0b" },
-  { label: "1:1s", pct: 12, color: "#84cc16" },
-  { label: "Other", pct: 7, color: "#e2e8f0" },
-];
-
-const COMPANY_UPDATES = [
-  { id: 1, title: "Q2 all-hands moved to Friday", time: "2 hours ago" },
-  { id: 2, title: "New review cycle June 1", time: "Yesterday" },
-];
-
-const WAITING_ON_ME = [
-  { id: 1, name: "Sarah", initials: "SK", color: "#bbf7d0", textColor: "#14532d", item: "RFC approval", days: 2 },
-  { id: 2, name: "Tanmay", initials: "TM", color: "#fee2e2", textColor: "#991b1b", item: "Q3 doc", days: 1 },
-];
-
-const LEADERBOARD = [
-  { rank: 1, name: "Akhil", initials: "AK", color: "#fde68a", textColor: "#92400e", points: 23, medal: "🥇" },
-  { rank: 2, name: "Paras", initials: "PR", color: "#fbcfe8", textColor: "#9d174d", points: 19, medal: "🥈" },
-  { rank: 3, name: "Sarah", initials: "SM", color: "#bbf7d0", textColor: "#14532d", points: 14, medal: "🥉" },
-];
-
-// Pre-computed heatmap data (deterministic)
-const HEATMAP = Array.from({ length: 12 }, (_, wi) =>
-  Array.from({ length: 5 }, (_, di) => {
-    const v = ((wi * 5 + di) * 37 + 13) % 100 / 100;
-    return v;
-  })
+// Pre-computed heatmap data (empty when no data)
+const HEATMAP = Array.from({ length: 12 }, () =>
+  Array.from({ length: 5 }, () => 0)
 );
 
 // ─── Shared Sub-Components ────────────────────────────────────────────────────
@@ -200,8 +143,9 @@ function MeFocusBanner() {
 
   const parts: string[] = [];
   if (urgent) parts.push(`${urgent} task${urgent > 1 ? "s" : ""} due this week`);
-  parts.push("2 1:1s tomorrow");
+  if (MEETINGS_1ON1.length) parts.push(`${MEETINGS_1ON1.length} 1:1s scheduled`);
   if (atRisk) parts.push(`${atRisk} goal${atRisk > 1 ? "s" : ""} at risk`);
+  if (parts.length === 0) parts.push("No urgent tasks or meetings");
 
   return (
     <div className="rounded-xl p-5" style={{ background: "linear-gradient(135deg,#eef2ff,#e0e7ff 60%,#ede9fe)" }}>
@@ -462,6 +406,7 @@ function MonthlyCalendar() {
 }
 
 function TimeAllocation() {
+  if (!TIME_ALLOC.length) return <><Hdr icon={<BarChart2 className="w-4 h-4" />} label="TIME ALLOCATION" /><Empty emoji="⏱️" title="No time tracked" sub="Time allocation data will appear as meetings and tasks are logged." /></>;
   return (
     <>
       <Hdr icon={<BarChart2 className="w-4 h-4" />} label="TIME ALLOCATION" />
@@ -481,6 +426,7 @@ function TimeAllocation() {
 }
 
 function QuarterlyOKR() {
+  if (!OKR_DATA.length) return <><Hdr icon={<BarChart2 className="w-4 h-4" />} label="QUARTERLY OKR ROLLUP" /><Empty emoji="📊" title="No OKRs defined" sub="Quarterly objectives will appear here." /></>;
   return (
     <>
       <Hdr icon={<BarChart2 className="w-4 h-4" />} label="QUARTERLY OKR ROLLUP" />
@@ -515,7 +461,7 @@ function CheckinHeatmap() {
           </div>
         ))}
       </div>
-      <div className="text-[12px] text-slate-500">12 day streak 🔥</div>
+      <div className="text-[12px] text-slate-500">0 day streak</div>
     </>
   );
 }
@@ -563,10 +509,10 @@ function TeamMood() {
     <>
       <Hdr icon={<Smile className="w-4 h-4" />} label="TEAM MOOD" />
       <div className="flex items-end gap-3 mt-1">
-        <div className="text-4xl">😊</div>
+        <div className="text-4xl">😐</div>
         <div>
-          <div className="text-[26px] font-bold text-slate-900 leading-none">7.8<span className="text-[14px] font-normal text-slate-400"> /10</span></div>
-          <div className="flex items-center gap-1 text-[12px] text-emerald-600 mt-1"><TrendingUp className="w-3 h-3" />+0.4 vs last week</div>
+          <div className="text-[26px] font-bold text-slate-900 leading-none">--<span className="text-[14px] font-normal text-slate-400"> /10</span></div>
+          <div className="text-[12px] text-slate-400 mt-1">No check-in mood data logged yet</div>
         </div>
       </div>
     </>
@@ -574,6 +520,7 @@ function TeamMood() {
 }
 
 function KudosWall() {
+  if (!KUDOS_WALL.length) return <><Hdr icon={<PartyPopper className="w-4 h-4" />} label="KUDOS WALL" /><Empty emoji="🎉" title="No kudos yet" sub="Give praise to your teammates to fill up the wall!" /></>;
   return (
     <>
       <Hdr icon={<PartyPopper className="w-4 h-4" />} label="KUDOS WALL" />
@@ -591,6 +538,7 @@ function KudosWall() {
 }
 
 function TeamLeaderboard() {
+  if (!LEADERBOARD.length) return <><Hdr icon={<Trophy className="w-4 h-4" />} label="LEADERBOARD" /><Empty emoji="🏆" title="No leaderboard data" sub="Leaderboard rankings will appear as goals and tasks are completed." /></>;
   return (
     <>
       <Hdr icon={<Trophy className="w-4 h-4" />} label="LEADERBOARD" />
@@ -664,7 +612,6 @@ function RecentActivity({ team }: { team: Reportee[] }) {
 // ─── MY TEAM TAB WIDGETS ──────────────────────────────────────────────────────
 
 function TeamFocusBanner({ team }: { team: Reportee[] }) {
-  const overdueOneOnOne = team.filter(m => m.id % 2 === 0).length;
   const atRisk = team.filter(m => {
     const avg = m.goals.length ? m.goals.reduce((a, g) => a + g.progress, 0) / m.goals.length : 0;
     return avg < 40;
@@ -678,15 +625,12 @@ function TeamFocusBanner({ team }: { team: Reportee[] }) {
         <div className="flex-1">
           <div className="text-[11px] font-semibold text-indigo-500 tracking-[0.1em] uppercase mb-1">TEAM FOCUS TODAY</div>
           <div className="text-[15px] font-bold text-slate-900 mb-3">
-            {overdueOneOnOne} overdue 1:1 · {atRisk} members at risk · {team.length} team members · 5 meetings this week
+            {atRisk} members at risk · {team.length} team members
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className="flex items-center gap-1.5 text-[11.5px] font-medium text-slate-700 bg-white/70 border border-white/60 rounded-full px-3 py-1 hover:bg-white transition-colors">
-              <Users className="w-3 h-3" />Members needing attention
-            </button>
-            <button className="flex items-center gap-1.5 text-[11.5px] font-medium text-slate-700 bg-white/70 border border-white/60 rounded-full px-3 py-1 hover:bg-white transition-colors">
-              <CalendarDays className="w-3 h-3" />Schedule overdue 1:1
-            </button>
+            <Link href="/team" className="flex items-center gap-1.5 text-[11.5px] font-medium text-slate-700 bg-white/70 border border-white/60 rounded-full px-3 py-1 hover:bg-white transition-colors">
+              <Users className="w-3 h-3" />View all team members
+            </Link>
           </div>
         </div>
       </div>
@@ -698,7 +642,7 @@ function TeamAvgProgressStat({ team }: { team: Reportee[] }) {
   let total = 0, count = 0;
   team.forEach(m => m.goals.forEach(g => { total += g.progress; count++; }));
   const avg = count ? Math.round(total / count) : 0;
-  return <StatTile label="Team avg progress" val={<>{avg}<span className="text-[18px]">%</span></>} subEl={<div className="flex items-center gap-1 text-[12px] text-emerald-600"><TrendingUp className="w-3.5 h-3.5" />+3% this week</div>} />;
+  return <StatTile label="Team avg progress" val={<>{avg}<span className="text-[18px]">%</span></>} subEl={<div className="flex items-center gap-1 text-[12px] text-emerald-600"><TrendingUp className="w-3.5 h-3.5" />Active goals average</div>} />;
 }
 
 function OnTrackStat({ team }: { team: Reportee[] }) {
@@ -714,14 +658,14 @@ function MembersAtRiskStat({ team }: { team: Reportee[] }) {
     const avg = m.goals.length ? m.goals.reduce((a, g) => a + g.progress, 0) / m.goals.length : 0;
     return avg < 40;
   }).length;
-  return <StatTile amber label="Members at risk" val={n} subEl={<div className="flex items-center gap-1 text-[12px] text-amber-600"><TrendingUp className="w-3.5 h-3.5" />+1 vs last week</div>} />;
+  return <StatTile amber label="Members at risk" val={n} subEl={<div className="flex items-center gap-1 text-[12px] text-amber-600"><AlertTriangle className="w-3.5 h-3.5" />Needing attention</div>} />;
 }
 
 function NeedsAttention({ team }: { team: Reportee[] }) {
   const AV_COLORS = [{ color: "#fee2e2", textColor: "#991b1b" }, { color: "#fbcfe8", textColor: "#9d174d" }, { color: "#fde68a", textColor: "#92400e" }];
   const attention = team.filter(m => {
     const avg = m.goals.length ? m.goals.reduce((a, g) => a + g.progress, 0) / m.goals.length : 0;
-    return avg < 40 || m.id % 2 === 0;
+    return avg < 40;
   }).slice(0, 3);
 
   if (!attention.length) return (
@@ -732,9 +676,8 @@ function NeedsAttention({ team }: { team: Reportee[] }) {
   );
 
   const getAction = (m: Reportee, i: number) => {
-    if (m.id % 2 === 0) return { label: "Schedule", reason: `No 1:1 in 14 days · ${Math.round(m.goals.reduce((a, g) => a + g.progress, 0) / (m.goals.length || 1))}% progress` };
     const overdueTasks = m.tasks.filter(t => !t.done).length;
-    if (overdueTasks > 2) return { label: "Review", reason: `${overdueTasks} tasks overdue · flagged at risk` };
+    if (overdueTasks > 2) return { label: "Review", reason: `${overdueTasks} tasks incomplete · flagged at risk` };
     return { label: "View", reason: `Goal "${(m.goals[0]?.title || "goal").slice(0, 24)}" at risk` };
   };
 
@@ -752,7 +695,7 @@ function NeedsAttention({ team }: { team: Reportee[] }) {
                 <div className="text-[13px] font-semibold text-slate-800">{m.name}</div>
                 <div className="text-[11px] text-slate-400 truncate">{action.reason}</div>
               </div>
-              <button className="text-[11px] px-3 py-1 border border-slate-200 rounded-full text-slate-600 hover:bg-slate-50 shrink-0">{action.label}</button>
+              <Link href={`/team/${m.id}`} className="text-[11px] px-3 py-1 border border-slate-200 rounded-full text-slate-600 hover:bg-slate-50 shrink-0">{action.label}</Link>
             </div>
           );
         })}
@@ -803,28 +746,11 @@ function WeeklyRiskRollup({ team }: { team: Reportee[] }) {
 }
 
 function ThisWeek1on1s({ team }: { team: Reportee[] }) {
-  const AV_COLORS = [{ color: "#fbcfe8", textColor: "#9d174d" }, { color: "#fde68a", textColor: "#92400e" }, { color: "#bbf7d0", textColor: "#14532d" }, { color: "#bfdbfe", textColor: "#1e40af" }];
-  const DAYS = ["Tue 10a", "Tue 3p", "Wed 11a", "Fri 2p"];
-  const schedule = team.slice(0, 4).map((m, i) => ({ member: m, slot: DAYS[i] }));
-
+  const schedule: any[] = [];
   if (!schedule.length) return <><Hdr icon={<CalendarDays className="w-4 h-4" />} label="THIS WEEK" count={0} /><Empty emoji="📅" title="Nothing this week" sub="No 1:1s scheduled yet." /></>;
-
   return (
     <>
       <Hdr icon={<CalendarDays className="w-4 h-4" />} label="THIS WEEK" count={schedule.length} />
-      <div className="space-y-1">
-        {schedule.map((s, i) => {
-          const ac = AV_COLORS[i % AV_COLORS.length];
-          const firstName = s.member.name.split(" ")[0];
-          return (
-            <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-              <span className="text-[11px] text-slate-400 w-14 shrink-0">{s.slot}</span>
-              <Av initials={initials(s.member.name)} color={ac.color} textColor={ac.textColor} size="sm" />
-              <span className="text-[13px] font-medium text-slate-800">{firstName}</span>
-            </div>
-          );
-        })}
-      </div>
     </>
   );
 }
@@ -840,15 +766,14 @@ function MyTeamList({ team }: { team: Reportee[] }) {
       <div>
         {team.map((m, i) => {
           const avg = m.goals.length ? Math.round(m.goals.reduce((a, g) => a + g.progress, 0) / m.goals.length) : 0;
-          const isOverdue = m.id % 2 === 0;
-          const statusLabel = isOverdue && avg < 30 ? "Off track" : avg < 50 ? "At risk" : "On track";
-          const statusColor = statusLabel === "Off track" ? { color: "#ef4444", bg: "#fee2e2" } : statusLabel === "At risk" ? { color: "#f59e0b", bg: "#fef3c7" } : { color: "#10b981", bg: "#d1fae5" };
+          const statusLabel = m.goals.length === 0 ? "No goals" : avg < 30 ? "Off track" : avg < 50 ? "At risk" : "On track";
+          const statusColor = statusLabel === "Off track" ? { color: "#ef4444", bg: "#fee2e2" } : statusLabel === "At risk" ? { color: "#f59e0b", bg: "#fef3c7" } : statusLabel === "No goals" ? { color: "#64748b", bg: "#f1f5f9" } : { color: "#10b981", bg: "#d1fae5" };
           const barColor = statusColor.color;
-          const trendText = isOverdue ? "14 days since last 1:1" : `${m.goals.length} goals · ${avg >= 80 ? "trending up" : avg >= 50 ? "all on track" : `${m.tasks.filter(t => !t.done).length} tasks overdue`}`;
-          const nextDate = isOverdue ? "Reschedule" : i % 3 === 0 ? "Thu, May 28" : "Tue, May 26";
+          const trendText = m.goals.length === 0 ? "No goals assigned" : `${m.goals.length} goals · ${avg >= 80 ? "trending up" : avg >= 50 ? "all on track" : `${m.tasks.filter(t => !t.done).length} tasks incomplete`}`;
+          const nextDate = m.checkInFreq ? `${m.checkInFreq}` : "No cadence";
           const ac = AV_COLORS[i % AV_COLORS.length];
           return (
-            <div key={m.id} className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-0 relative">
+            <Link key={m.id} href={`/team/${m.id}`} className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-0 relative hover:bg-slate-50 transition-colors">
               <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-sm" style={{ backgroundColor: statusColor.color }} />
               <div className="pl-3">
                 <Av initials={initials(m.name)} color={ac.color} textColor={ac.textColor} />
@@ -864,15 +789,15 @@ function MyTeamList({ team }: { team: Reportee[] }) {
                   </div>
                   <span className="text-[12px] font-bold text-slate-800 shrink-0 w-7 text-right">{avg}%</span>
                 </div>
-                <div className={`text-[11px] ${isOverdue ? "text-rose-500 font-medium" : "text-slate-400"}`}>{trendText}</div>
+                <div className="text-[11px] text-slate-400">{trendText}</div>
               </div>
               <div className="shrink-0">
                 <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ backgroundColor: statusColor.bg, color: statusColor.color }}>
                   {statusLabel}
                 </span>
               </div>
-              <div className={`text-[12px] shrink-0 w-20 text-right ${isOverdue ? "text-rose-500 font-semibold" : "text-slate-600"}`}>{nextDate}</div>
-            </div>
+              <div className="text-[12px] shrink-0 w-20 text-right text-slate-600">{nextDate}</div>
+            </Link>
           );
         })}
       </div>
@@ -881,9 +806,9 @@ function MyTeamList({ team }: { team: Reportee[] }) {
 }
 
 function OneOnOneCadence({ team }: { team: Reportee[] }) {
-  const onSchedule = team.filter(m => m.id % 2 !== 0).length;
-  const pct = team.length ? Math.round((onSchedule / team.length) * 100) : 0;
-  return <StatTile label="1:1 cadence" val={<>{pct}<span className="text-[18px]">%</span></>} subEl={<div className="text-[12px] text-slate-400">of 1:1s on schedule</div>} />;
+  const withCadence = team.filter(m => m.checkInFreq && m.checkInFreq !== "").length;
+  const pct = team.length ? Math.round((withCadence / team.length) * 100) : 0;
+  return <StatTile label="1:1 cadence" val={<>{pct}<span className="text-[18px]">%</span></>} subEl={<div className="text-[12px] text-slate-400">have check-in cadence set</div>} />;
 }
 
 // ─── WIDGET DEFINITIONS ───────────────────────────────────────────────────────
