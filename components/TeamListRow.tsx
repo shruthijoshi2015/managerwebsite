@@ -218,8 +218,8 @@ export const TeamListRow: React.FC<TeamListRowProps> = ({ member, config, onPrep
             <span className={`${nameSize} font-semibold text-slate-900 leading-tight truncate`}>{member.name}</span>
             {size === 'mini' && <span className="text-[11.5px] text-slate-400 font-normal truncate"> • {member.role}</span>}
             {isManagerMember && size !== 'mini' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase tracking-wider border border-purple-200 shrink-0">
-                <Crown className="w-3 h-3" /> Manager
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider border border-slate-200 shrink-0">
+                <Crown className="w-3 h-3 text-slate-600" /> Manager
               </span>
             )}
           </div>
@@ -227,7 +227,7 @@ export const TeamListRow: React.FC<TeamListRowProps> = ({ member, config, onPrep
             <div className={`flex items-center gap-2 ${size === 'large' ? 'text-[13px] mt-1' : 'text-[12px] mt-0.5'} text-slate-500 leading-tight truncate`}>
               <span>{member.role}</span>
               {member.checkInFreq && (
-                <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-indigo-100 shrink-0">
+                <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border border-slate-200 shrink-0">
                   🔄 {member.checkInFreq}
                 </span>
               )}

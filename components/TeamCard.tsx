@@ -90,10 +90,17 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
         return (
           <div key={key}>
             <div className="flex justify-between items-end mb-1">
-              <span className="text-[11px] font-medium text-slate-500">Goal progress</span>
+              <span className="text-[11px] font-medium text-slate-500" id={`goal-progress-label-${member.id}`}>Goal progress</span>
               <span className={`text-[12px] font-bold ${colors.text}`}>{member.goalsProgressAvg}%</span>
             </div>
-            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div 
+              role="progressbar" 
+              aria-labelledby={`goal-progress-label-${member.id}`} 
+              aria-valuenow={member.goalsProgressAvg} 
+              aria-valuemin={0} 
+              aria-valuemax={100} 
+              className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"
+            >
               <div className={`h-full rounded-full ${colors.bg}`} style={{ width: `${member.goalsProgressAvg}%` }} />
             </div>
           </div>
@@ -158,7 +165,7 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
             {onPrep && (
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrep(member.id, member.name); }}
-                className="self-center px-2.5 py-1.5 border border-indigo-200 rounded-lg text-[10px] font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-1 shrink-0"
+                className="self-center px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 rounded-lg text-[10px] font-bold text-white transition-all shadow-xs flex items-center gap-1 shrink-0"
               >
                 <span className="text-[10px]">✨</span> Prep
               </button>
@@ -192,7 +199,12 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
   };
 
   return (
-    <Link href={`/team/${member.id}`} className="block w-full">
+    <Link 
+      href={`/team/${member.id}`} 
+      role="article" 
+      aria-label={`Team member card for ${member.name}, ${member.role}`}
+      className="block w-full focus-visible:outline-2 focus-visible:outline-indigo-500 rounded-xl"
+    >
       <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow relative pt-1`}>
         <div className={`absolute top-0 left-0 right-0 h-1 ${colors.bg}`} />
         
@@ -206,15 +218,15 @@ export function TeamCard({ member, config, onPrep }: TeamCardProps) {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h3 className={`font-semibold text-slate-900 leading-tight ${size === 'large' ? 'text-[16px]' : 'text-[14px]'}`}>{member.name}</h3>
                   {isManagerMember && (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase tracking-wider border border-purple-200 shrink-0">
-                      <Crown className="w-3 h-3" /> Manager
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider border border-slate-200 shrink-0">
+                      <Crown className="w-3 h-3 text-slate-600" /> Manager
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <p className={`text-slate-500 leading-none ${size === 'large' ? 'text-[13px]' : 'text-[12px]'}`}>{member.role}</p>
                   {member.checkInFreq && (
-                    <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-indigo-100">
+                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border border-slate-200">
                       🔄 {member.checkInFreq}
                     </span>
                   )}

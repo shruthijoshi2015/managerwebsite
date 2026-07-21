@@ -36,6 +36,9 @@ export type Goal = {
   dueDate?: string;
   priority?: 'P0' | 'P1' | 'P2';
   confidence?: number;
+  dependsOnGoalIds?: number[];
+  isOnboarding?: boolean;
+  onboardingPhase?: '30' | '60' | '90';
 };
 export type Task = { 
   id: number; 
@@ -47,6 +50,7 @@ export type Task = {
   completedAt?: string; 
   owner?: 'manager' | 'reportee'; 
   sourceNoteId?: number;
+  dueDate?: string;
 };
 export type Note = { 
   id: number; 
@@ -92,6 +96,10 @@ export type Config = {
   templates: TemplateConfig[];
   cardConfig: CardConfig;
   goalModalConfig?: GoalModalConfig;
+  calendarFeedUrl?: string;
+  calendarProvider?: 'google' | 'outlook' | 'none';
+  lastCalendarSync?: string;
+  syncedMeetings?: { id: string; title: string; date: string; reporteeId?: number; hasAgenda: boolean }[];
 };
 
 export type Reportee = {
@@ -110,6 +118,7 @@ export type Reportee = {
   careerTrack?: 'Individual Contributor' | 'Management' | string;
   performance?: 'High Performer' | 'Steady' | 'Needs Improvement' | string;
   isManager?: boolean;
+  onboardingPlan?: { phase: '30' | '60' | '90'; startDate: string };
 };
 
 export type Database = {

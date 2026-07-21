@@ -117,19 +117,19 @@
                   "workerIndex": 1,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 143,
+                  "duration": 2001,
                   "errors": [],
                   "stdout": [
                     {
                       "text": "🧹 Running global teardown to clean up demo data generated from automated tests...\n"
                     },
                     {
-                      "text": "✅ Cleanup completed: Removed 1 automated test records. Active team members: 0\n"
+                      "text": "✅ Cleanup completed: Removed 1 automated test records. Active team members: 3\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-07-01T13:29:37.622Z",
+                  "startTime": "2026-07-10T09:04:56.161Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -173,7 +173,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3317,
+                      "duration": 7564,
                       "errors": [],
                       "stdout": [
                         {
@@ -182,7 +182,7 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T13:29:10.407Z",
+                      "startTime": "2026-07-10T09:04:06.411Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -211,7 +211,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4134,
+                      "duration": 5821,
                       "errors": [],
                       "stdout": [
                         {
@@ -220,7 +220,7 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T13:29:14.364Z",
+                      "startTime": "2026-07-10T09:04:18.080Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -249,7 +249,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4704,
+                      "duration": 12223,
                       "errors": [],
                       "stdout": [
                         {
@@ -258,7 +258,7 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T13:29:18.572Z",
+                      "startTime": "2026-07-10T09:04:24.068Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -287,7 +287,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6132,
+                      "duration": 8333,
                       "errors": [],
                       "stdout": [
                         {
@@ -296,7 +296,7 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T13:29:23.336Z",
+                      "startTime": "2026-07-10T09:04:36.338Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -306,7 +306,7 @@
               ],
               "id": "724d5ccaf4f977a2d6e1-951b71ee0a5d2f39584c",
               "file": "12-recent-changes.spec.ts",
-              "line": 108,
+              "line": 114,
               "column": 7
             },
             {
@@ -325,7 +325,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6081,
+                      "duration": 7359,
                       "errors": [],
                       "stdout": [
                         {
@@ -334,7 +334,7 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T13:29:29.543Z",
+                      "startTime": "2026-07-10T09:04:44.720Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -344,7 +344,7 @@
               ],
               "id": "724d5ccaf4f977a2d6e1-45f42e70cfac962988c3",
               "file": "12-recent-changes.spec.ts",
-              "line": 183,
+              "line": 189,
               "column": 7
             }
           ]
@@ -354,8 +354,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-01T13:29:08.278Z",
-    "duration": 29596.190000000002,
+    "startTime": "2026-07-10T09:03:45.845Z",
+    "duration": 73078.291,
     "expected": 6,
     "skipped": 0,
     "unexpected": 0,

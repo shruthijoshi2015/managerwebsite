@@ -47,3 +47,16 @@ body {
   margin-top: 0.25rem;
   margin-bottom: 0.25rem;
 }
+
+/* Ensure all links inside notes and notebook areas are highlighted in blue and underlined */
+[contenteditable] a, [contenteditable] a *, .prose a, .prose a *, .note-content a, .note-content a * {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: color 0.15s ease;
+}
+
+[contenteditable] a:hover, [contenteditable] a:hover *, .prose a:hover, .prose a:hover *, .note-content a:hover, .note-content a:hover * {
+  color: #1d4ed8 !important;
+}

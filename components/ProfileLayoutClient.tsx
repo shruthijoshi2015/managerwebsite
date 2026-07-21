@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MoreVertical, X, Target, Plus, Pencil, Sparkles, Wand2, AlertTriangle, Check, ChevronDown, Trash2 } from "lucide-react";
 import { VoiceInputButton } from "@/components/VoiceInputButton";
 import { UserQuickScratchpad } from "@/components/UserQuickScratchpad";
+import { useIndexedDB } from "@/components/IndexedDBProvider";
 
 /* ─── Hierarchy Icon SVG ─── */
 const HierarchyIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -30,6 +31,9 @@ import { RiskExplanationPopover } from "./RiskExplanationPopover";
 import { Reportee, TemplateConfig, Task, Goal, FreqConfig } from "@/lib/db";
 import { addGoal, updateGoal, updateReporteeProfile, deleteGoal, deleteReportee } from "@/lib/actions";
 import { useCardConfig } from "@/lib/CardConfigContext";
+import { GoalDependenciesSection } from "./GoalDependenciesSection";
+import { CalendarSyncModal } from "./CalendarSyncModal";
+import { OnboardingModal } from "./OnboardingModal";
 
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
 
@@ -71,6 +75,8 @@ export function GoalModal({
   initialTitle?: string;
   initialDescription?: string;
 }) {
+  const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
   const { goalModalConfig } = useCardConfig();
   const [title, setTitle] = useState(editGoal?.title || initialTitle || "");
   const [description, setDescription] = useState(editGoal?.description || initialDescription || "");
@@ -87,6 +93,7 @@ export function GoalModal({
   const [dueDate, setDueDate] = useState<string>(editGoal?.dueDate || "");
   const [priority, setPriority] = useState<string>(editGoal?.priority || "P0");
   const [confidence, setConfidence] = useState<number>(editGoal?.confidence || 7);
+  const [dependsOnGoalIds, setDependsOnGoalIds] = useState<number[]>(editGoal?.dependsOnGoalIds || []);
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -190,7 +197,8 @@ export function GoalModal({
         icon, tags, measurementType: measurementType as any, 
         measurementStart: measurementStart ? parseFloat(measurementStart) : undefined, 
         measurementTarget: measurementTarget ? parseFloat(measurementTarget) : undefined, 
-        dueDate, priority: priority as any, confidence 
+        dueDate, priority: priority as any, confidence,
+        dependsOnGoalIds
       });
     } else {
       const fd = new FormData();
@@ -206,9 +214,12 @@ export function GoalModal({
       if (dueDate) fd.set("dueDate", dueDate);
       if (priority) fd.set("priority", priority);
       if (confidence) fd.set("confidence", confidence.toString());
+      if (dependsOnGoalIds.length > 0) fd.set("dependsOnGoalIds", JSON.stringify(dependsOnGoalIds));
       if (pendingSubgoals.length > 0) fd.set("pendingSubgoals", JSON.stringify(pendingSubgoals));
       await addGoal(reporteeId, fd);
     }
+    await persistAfterMutation();
+    router.refresh();
     setIsSaving(false);
     onClose();
   };
@@ -462,6 +473,16 @@ export function GoalModal({
               </div>
             )}
 
+            {/* Goal Dependencies */}
+            <div className="mb-8">
+              <GoalDependenciesSection
+                currentGoalId={editGoal?.id}
+                availableGoals={allGoals}
+                selectedDependencyIds={dependsOnGoalIds}
+                onChange={setDependsOnGoalIds}
+              />
+            </div>
+
             {/* Subgoals */}
             {goalModalConfig?.size !== 'mini' && goalModalConfig?.showSubgoals !== false && (
               <div>
@@ -657,7 +678,7 @@ export function GoalModal({
           <div>
             {isEditing && (
               <button 
-                onClick={async () => { if(confirm("Are you sure you want to delete this goal?")) { await deleteGoal(reporteeId, editGoal.id); onClose(); } }}
+                onClick={async () => { if(confirm("Are you sure you want to delete this goal?")) { await deleteGoal(reporteeId, editGoal.id); await persistAfterMutation(); router.refresh(); onClose(); } }}
                 className="px-4 py-2 text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors rounded-lg border border-transparent hover:border-red-200"
               >
                 Delete goal
@@ -686,7 +707,8 @@ export function ProfileLayoutClient({
   activeTasks, 
   completedTasks,
   frequencies,
-  teamContext
+  teamContext,
+  allMembers
 }: { 
   mockUser: Reportee; 
   templates: TemplateConfig[]; 
@@ -695,8 +717,10 @@ export function ProfileLayoutClient({
   completedTasks: Task[];
   frequencies: FreqConfig[];
   teamContext?: any[];
+  allMembers?: { id: number; name: string; role?: string }[];
 }) {
   const router = useRouter();
+  const { persistAfterMutation } = useIndexedDB();
   const isManagerUser = mockUser.isManager || mockUser.role?.toLowerCase().includes("manager") || mockUser.id === 999;
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
@@ -709,9 +733,13 @@ export function ProfileLayoutClient({
   const [showPerfReview, setShowPerfReview] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
   const [isProfileAiOpen, setIsProfileAiOpen] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showCalendarSync, setShowCalendarSync] = useState(false);
   const [convertedActionTitle, setConvertedActionTitle] = useState<string | undefined>(undefined);
   const [convertedGoalTitle, setConvertedGoalTitle] = useState<string | undefined>(undefined);
   const [notesViewFilter, setNotesViewFilter] = useState<'all' | 'scratchpad' | 'checkin'>('checkin');
+  const [activeMainTab, setActiveMainTab] = useState<'scratchpad' | 'checkin' | 'actions' | 'goals'>('checkin');
+  const [scratchpadCount, setScratchpadCount] = useState(0);
   
   // Goals Accordion State
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
@@ -747,6 +775,8 @@ export function ProfileLayoutClient({
 
   const handleSaveProfile = async () => {
     await updateReporteeProfile(mockUser.id, profileData);
+    await persistAfterMutation();
+    router.refresh();
     setShowEditProfile(false);
   };
 
@@ -828,357 +858,505 @@ export function ProfileLayoutClient({
   
   const allTasks = [...activeTasks, ...completedTasks];
 
+  const navList = allMembers && allMembers.length > 0 ? allMembers : [
+    { id: mockUser.id, name: mockUser.name, role: mockUser.role },
+    ...(teamContext || []).map((t: any) => ({ id: t.id, name: t.name, role: t.role }))
+  ];
+  const currentIndex = navList.findIndex(m => String(m.id) === String(mockUser.id));
+  const totalCount = navList.length;
+  const prevMember = totalCount > 1 && currentIndex >= 0 ? navList[(currentIndex - 1 + totalCount) % totalCount] : null;
+  const nextMember = totalCount > 1 && currentIndex >= 0 ? navList[(currentIndex + 1) % totalCount] : null;
+
   return (
     <div className="w-full flex flex-col pb-6 bg-[#fafafa]">
-      <div className="max-w-7xl w-full mx-auto px-8 mt-6">
-        <PanelGroup orientation="horizontal" className="h-[calc(100vh-60px)] min-h-[500px] border-t border-slate-200">
-          
-          {/* MAIN COLUMN (Left) - 60% */}
-          <Panel defaultSize={60} minSize={40} className="flex flex-col h-full pr-4">
-            
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 mb-3 text-[12px] font-medium">
-              <Link href="/team" className="text-slate-500 hover:text-indigo-600 transition-colors">My Team</Link>
-              <span className="text-slate-300">/</span>
-              <span className="text-slate-800">{mockUser.name}</span>
-            </div>
+      <div className="max-w-7xl w-full mx-auto px-8 mt-6 flex flex-col min-h-[calc(100vh-60px)]">
+        {/* Breadcrumb & Navigation Switcher */}
+        <div className="flex items-center justify-between mb-3 text-[13px] font-medium shrink-0">
+          <div className="flex items-center gap-2">
+            <Link href="/team" className="text-slate-500 hover:text-indigo-600 transition-colors font-semibold">My Team</Link>
+            <span className="text-slate-300 font-normal">›</span>
+            <span className="text-slate-900 font-bold">{mockUser.name}</span>
+          </div>
 
-            {/* Identity Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4 shrink-0">
-               <div className="flex items-center gap-3">
-                 <Avatar name={mockUser.name} size="sm" />
-                 <button 
-                   onClick={() => setShowEditProfile(true)} 
-                   className="text-left group transition-colors rounded hover:bg-slate-50 px-2 py-1 -ml-2"
-                   title="Edit Profile"
-                 >
-                   <h2 className="text-lg font-medium text-slate-900 flex items-center gap-1.5 leading-tight flex-wrap">
-                     {mockUser.name}
-                     <span className="text-slate-400 font-normal">·</span>
-                     <span className="text-[13px] text-slate-500 font-normal">{mockUser.role}</span>
-                     {mockUser.checkInFreq && (
-                       <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border border-indigo-100 ml-1">
-                         🔄 {mockUser.checkInFreq} Check-ins
-                       </span>
-                     )}
-                   </h2>
-                 </button>
-               </div>
-               <div className="flex gap-2">
-                  <div className="relative">
+          {totalCount > 1 && prevMember && nextMember && (
+            <div className="flex items-center gap-3 bg-white border border-slate-200/80 rounded-full px-3.5 py-1 shadow-2xs text-slate-700 font-semibold">
+              <Link 
+                href={`/team/${prevMember.id}`} 
+                className="flex items-center gap-1.5 px-2 py-0.5 hover:bg-slate-100 rounded-full text-slate-600 hover:text-indigo-600 transition-colors"
+                title={`Previous: ${prevMember.name}`}
+              >
+                <span className="text-slate-400 font-bold">&lt;</span>
+                <span className="max-w-[120px] truncate">{prevMember.name.split(' ')[0]}</span>
+              </Link>
+
+              <span className="bg-slate-100 text-slate-800 font-bold px-2.5 py-0.5 rounded-full text-[11px] select-none border border-slate-200/60">
+                {currentIndex + 1} / {totalCount}
+              </span>
+
+              <Link 
+                href={`/team/${nextMember.id}`} 
+                className="flex items-center gap-1.5 px-2 py-0.5 hover:bg-slate-100 rounded-full text-slate-600 hover:text-indigo-600 transition-colors"
+                title={`Next: ${nextMember.name}`}
+              >
+                <span className="max-w-[120px] truncate">{nextMember.name.split(' ')[0]}</span>
+                <span className="text-slate-400 font-bold">&gt;</span>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Identity Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <Avatar name={mockUser.name} size="sm" />
+            <button 
+              onClick={() => setShowEditProfile(true)} 
+              className="text-left group transition-colors rounded hover:bg-slate-50 px-2 py-1 -ml-2"
+              title="Edit Profile"
+            >
+              <h2 className="text-lg font-medium text-slate-900 flex items-center gap-1.5 leading-tight flex-wrap">
+                {mockUser.name}
+                <span className="text-slate-400 font-normal">·</span>
+                <span className="text-[13px] text-slate-500 font-normal">{mockUser.role}</span>
+                {mockUser.checkInFreq && (
+                  <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border border-indigo-100 ml-1">
+                    🔄 {mockUser.checkInFreq} Check-ins
+                  </span>
+                )}
+              </h2>
+            </button>
+          </div>
+          <div className="flex gap-2 items-center flex-wrap justify-end">
+            <button
+              onClick={() => setShowOnboardingModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[12px] font-semibold transition shadow-sm"
+              title="Generate structured 30/60/90 day milestones"
+            >
+              🚀 Start 30/60/90 Onboarding Plan
+            </button>
+            <button
+              onClick={() => setShowCalendarSync(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[12px] font-semibold transition shadow-sm"
+              title="Connect calendar & auto-detect check-ins"
+            >
+              📆 Calendar Sync
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setIsProfileAiOpen(!isProfileAiOpen)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-[12px] font-semibold transition shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                AI Tools
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </button>
+
+              {isProfileAiOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsProfileAiOpen(false)} />
+                  <div className="absolute top-full mt-2 right-0 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
                     <button
-                      onClick={() => setIsProfileAiOpen(!isProfileAiOpen)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-[12px] font-semibold transition shadow-sm"
+                      onClick={() => { setShowPrep(true); setIsProfileAiOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      AI Tools
-                      <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                      <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center shrink-0">
+                        <span className="text-[14px]">✨</span>
+                      </div>
+                      <span className="text-[13px] font-semibold text-slate-800">Prep for 1:1</span>
                     </button>
-
-                    {isProfileAiOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setIsProfileAiOpen(false)} />
-                        <div className="absolute top-full mt-2 right-0 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
-                          <button
-                            onClick={() => { setShowPrep(true); setIsProfileAiOpen(false); }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                          >
-                            <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center shrink-0">
-                              <span className="text-[14px]">✨</span>
-                            </div>
-                            <span className="text-[13px] font-semibold text-slate-800">Prep for 1:1</span>
-                          </button>
-                          <button
-                            onClick={() => { setShowPerfReview(true); setIsProfileAiOpen(false); }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                          >
-                            <div className="w-7 h-7 rounded-md bg-amber-50 flex items-center justify-center shrink-0">
-                              <span className="text-[14px]">⭐</span>
-                            </div>
-                            <span className="text-[13px] font-semibold text-slate-800">Draft Review</span>
-                          </button>
-                          <button
-                            onClick={() => { setShowAgenda(true); setIsProfileAiOpen(false); }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                          >
-                            <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-                              <span className="text-[14px]">📋</span>
-                            </div>
-                            <span className="text-[13px] font-semibold text-slate-800">Gen Agenda</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
+                    <button
+                      onClick={() => { setShowPerfReview(true); setIsProfileAiOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-md bg-amber-50 flex items-center justify-center shrink-0">
+                        <span className="text-[14px]">⭐</span>
+                      </div>
+                      <span className="text-[13px] font-semibold text-slate-800">Draft Review</span>
+                    </button>
+                    <button
+                      onClick={() => { setShowAgenda(true); setIsProfileAiOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+                        <span className="text-[14px]">📋</span>
+                      </div>
+                      <span className="text-[13px] font-semibold text-slate-800">Gen Agenda</span>
+                    </button>
                   </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Top Tab Bar (Design 2B) */}
+        <div className="flex items-center gap-1 border-b border-slate-200 mb-5 shrink-0 overflow-x-auto">
+          <button
+            onClick={() => setActiveMainTab('scratchpad')}
+            className={`px-4 py-2.5 text-[13px] font-semibold flex items-center gap-2 border-b-2 transition-all shrink-0 ${
+              activeMainTab === 'scratchpad' ? 'border-indigo-600 text-indigo-950 bg-indigo-50/40' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
+            }`}
+          >
+            <span>⚡ Scratchpad</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${activeMainTab === 'scratchpad' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
+              {scratchpadCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveMainTab('checkin')}
+            className={`px-4 py-2.5 text-[13px] font-semibold flex items-center gap-2 border-b-2 transition-all shrink-0 ${
+              activeMainTab === 'checkin' ? 'border-indigo-600 text-indigo-950 bg-indigo-50/40' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
+            }`}
+          >
+            <span>📝 Check-in notes</span>
+          </button>
+
+          <button
+            onClick={() => setActiveMainTab('actions')}
+            className={`px-4 py-2.5 text-[13px] font-semibold flex items-center gap-2 border-b-2 transition-all shrink-0 ${
+              activeMainTab === 'actions' ? 'border-indigo-600 text-indigo-950 bg-indigo-50/40' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
+            }`}
+          >
+            <span>✅ Actions</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${activeMainTab === 'actions' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
+              {allTasks.filter(t => !t.done && t.status !== 'resolved').length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveMainTab('goals')}
+            className={`px-4 py-2.5 text-[13px] font-semibold flex items-center gap-2 border-b-2 transition-all shrink-0 ${
+              activeMainTab === 'goals' ? 'border-indigo-600 text-indigo-950 bg-indigo-50/40' : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
+            }`}
+          >
+            <span>🎯 Goals</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${activeMainTab === 'goals' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
+              {mockUser.goals.filter(g => !g.parentId).length}
+            </span>
+          </button>
+        </div>
+
+        {/* 1. Scratchpad or Check-in Notes Tab (Split View with Quick Glance Side Panel) */}
+        {(activeMainTab === 'scratchpad' || activeMainTab === 'checkin') && (
+          <PanelGroup orientation="horizontal" className="flex-1 min-h-[560px] h-[calc(100vh-230px)]">
+            {/* LEFT PANEL - Editor / Scratchpad */}
+            <Panel defaultSize={65} minSize={40} className="flex flex-col h-full pr-4">
+              {activeMainTab === 'scratchpad' && (
+                <UserQuickScratchpad 
+                  reporteeId={mockUser.id} 
+                  reporteeName={mockUser.name}
+                  onCountChange={setScratchpadCount}
+                  onConvertToAction={(text) => { setEditActionTask(undefined); setConvertedActionTitle(text); setShowActionModal(true); }}
+                  onConvertToGoal={(text) => { setEditGoal(undefined); setConvertedGoalTitle(text); setShowGoalModal(true); }}
+                />
+              )}
+              {activeMainTab === 'checkin' && (
+                <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
+                  {NotesBlock}
                 </div>
-            </div>
+              )}
+            </Panel>
 
-            {/* View Filter Bar for Notes Tab */}
-            <div className="flex items-center justify-between bg-slate-100/80 p-1.5 rounded-lg border border-slate-200/60 mb-4 shrink-0">
-              <div className="flex items-center gap-1">
-                <button onClick={() => setNotesViewFilter('all')} className={`px-3 py-1 text-[12px] font-semibold rounded transition ${notesViewFilter === 'all' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
-                  ✨ All Notes View
-                </button>
-                <button onClick={() => setNotesViewFilter('scratchpad')} className={`px-3 py-1 text-[12px] font-semibold rounded transition flex items-center gap-1.5 ${notesViewFilter === 'scratchpad' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
-                  ⚡ Quick Scratchpad Only
-                </button>
-                <button onClick={() => setNotesViewFilter('checkin')} className={`px-3 py-1 text-[12px] font-semibold rounded transition flex items-center gap-1.5 ${notesViewFilter === 'checkin' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
-                  💬 Check-in Notes Only
-                </button>
-              </div>
-            </div>
+            <PanelResizeHandle className="w-2 relative flex flex-col items-center justify-center group cursor-col-resize">
+              <div className="w-px h-full bg-slate-200 group-hover:bg-slate-400 group-active:bg-slate-500 transition-colors" />
+              <div className="absolute h-8 w-1 bg-slate-300 rounded-full group-hover:bg-slate-400 group-active:bg-slate-500 transition-colors" />
+            </PanelResizeHandle>
 
-            {/* Quick Notes Scratchpad (Design 2A) */}
-            {(notesViewFilter === 'all' || notesViewFilter === 'scratchpad') && (
-              <UserQuickScratchpad 
-                reporteeId={mockUser.id} 
-                reporteeName={mockUser.name}
-                onConvertToAction={(text) => { setEditActionTask(undefined); setConvertedActionTitle(text); setShowActionModal(true); }}
-                onConvertToGoal={(text) => { setEditGoal(undefined); setConvertedGoalTitle(text); setShowGoalModal(true); }}
-              />
-            )}
-
-            {/* Notes Section */}
-            {(notesViewFilter === 'all' || notesViewFilter === 'checkin') && (
-              <div className="flex flex-col flex-1 min-h-0">
-                <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden flex-1 flex flex-col">
-                   {NotesBlock}
-                </div>
-              </div>
-            )}
-
-          </Panel>
-
-          {/* Resizable Horizontal Splitter */}
-          <PanelResizeHandle className="w-2 relative flex flex-col items-center justify-center group cursor-col-resize">
-            <div className="w-px h-full bg-slate-200 group-hover:bg-slate-400 group-active:bg-slate-500 transition-colors" />
-            <div className="absolute h-8 w-1 bg-slate-300 rounded-full group-hover:bg-slate-400 group-active:bg-slate-500 transition-colors" />
-          </PanelResizeHandle>
-
-          {/* RIGHT RAIL - 40% */}
-          <Panel defaultSize={40} minSize={25} className="flex flex-col pl-4 h-full">
-            <div className="flex bg-slate-100 p-1 rounded-md mb-4 shrink-0" role="tablist">
-              <button 
-                role="tab"
-                onClick={() => setRightTab('tasks')} 
-                className={`flex-1 py-1.5 text-[13px] font-medium rounded-sm transition-all ${rightTab === 'tasks' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Actions
-              </button>
-              <button 
-                role="tab"
-                onClick={() => setRightTab('goals')} 
-                className={`flex-1 py-1.5 text-[13px] font-medium rounded-sm transition-all ${rightTab === 'goals' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Goals
-              </button>
-            </div>
-
-            <div className="flex flex-col flex-1 min-h-0 pb-4 pr-1">
-              
-              {/* Goals Section */}
-              {rightTab === 'goals' && (
-                <div className="flex flex-col h-full">
-                  <div className="flex justify-between items-center mb-3 shrink-0">
-                    <h3 className="font-semibold text-slate-900 text-[15px]">Goals</h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={fetchSuggestedGoals}
-                        disabled={suggestLoading}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded text-[12px] font-medium text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm disabled:opacity-60"
-                      >
-                        <span className={suggestLoading ? "animate-spin inline-block" : ""}>✨</span>
-                        {suggestLoading ? "..." : "Suggest"}
-                      </button>
-                      <button
-                        onClick={() => { setEditGoal(undefined); setShowGoalModal(true); }}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
-                      >
-                        <Plus className="w-3.5 h-3.5" /> Goals
-                      </button>
-                    </div>
+            {/* RIGHT PANEL - Side Panel for Quick Glance (Actions & Goals) */}
+            <Panel defaultSize={35} minSize={25} className="flex flex-col pl-4 h-full">
+              <div className="flex flex-col h-full overflow-y-auto space-y-4 pr-1 pb-4">
+                
+                {/* Quick Glance Actions */}
+                <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-2xs shrink-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-bold text-slate-900 text-[14px]">Actions</h3>
+                    <span className="bg-blue-50 text-blue-700 font-bold text-[11px] px-2 py-0.5 rounded-full">
+                      {allTasks.filter(t => !t.done && t.status !== 'resolved').length}
+                    </span>
                   </div>
-
-                  {/* AI Suggest Panel */}
-                  {showSuggestPanel && (
-                    <div className="mb-3 border border-indigo-200 bg-indigo-50/40 rounded-lg overflow-hidden shrink-0">
-                      <div className="flex items-center justify-between px-3 py-2 border-b border-indigo-100">
-                        <span className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider">✨ AI Suggestions</span>
-                        <div className="flex items-center gap-2">
-                          {selectedGoalIdxs.size > 0 && (
-                            <button
-                              onClick={addSelectedGoals}
-                              disabled={addingGoals}
-                              className="px-2.5 py-1 text-[11px] font-semibold bg-indigo-700 text-white rounded hover:bg-indigo-800 transition-colors disabled:opacity-60"
-                            >
-                              {addingGoals ? "Adding..." : `Add ${selectedGoalIdxs.size} goal${selectedGoalIdxs.size > 1 ? "s" : ""}`}
-                            </button>
-                          )}
-                          <button onClick={() => { setShowSuggestPanel(false); setSuggestedGoals([]); setSelectedGoalIdxs(new Set()); }} className="text-[11px] text-indigo-400 hover:text-indigo-700">✕</button>
+                  <div className="space-y-2 mb-3">
+                    {allTasks.filter(t => !t.done && t.status !== 'resolved').slice(0, 4).map((t: Task) => (
+                      <div 
+                        key={t.id} 
+                        onClick={() => { setEditActionTask(t); setShowActionModal(true); }}
+                        className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-transparent hover:border-slate-200 group"
+                      >
+                        <span className="mt-1 w-3.5 h-3.5 rounded-full border-2 border-slate-300 group-hover:border-indigo-600 shrink-0 flex items-center justify-center" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-medium text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{t.title}</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {t.priority && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                t.priority === 'P0' ? 'bg-red-50 text-red-600 border border-red-200' :
+                                t.priority === 'P1' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                                'bg-slate-100 text-slate-600 border border-slate-200'
+                              }`}>
+                                {t.priority}
+                              </span>
+                            )}
+                            {t.timeframe && <span className="text-[11px] text-slate-400">{t.timeframe}</span>}
+                          </div>
                         </div>
                       </div>
-                      {suggestLoading ? (
-                        <div className="px-4 py-5 text-center text-[12px] text-indigo-500 animate-pulse">✨ Generating smart goal suggestions...</div>
-                      ) : suggestedGoals.length > 0 ? (
-                        <div className="divide-y divide-indigo-100 max-h-64 overflow-y-auto">
-                          {suggestedGoals.map((g, i) => (
-                            <button key={i} type="button" onClick={() => toggleSuggestIdx(i)}
-                              className={`w-full text-left px-3 py-2.5 transition-colors flex items-start gap-2.5 ${selectedGoalIdxs.has(i) ? "bg-indigo-100" : "hover:bg-indigo-50/60"}`}>
-                              <span className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${selectedGoalIdxs.has(i) ? "bg-indigo-700 border-indigo-700" : "border-indigo-300"}`}>
-                                {selectedGoalIdxs.has(i) && <span className="text-white text-[9px] font-bold">✓</span>}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-[12px] font-semibold text-slate-800">{g.title}</p>
-                                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{g.description}</p>
-                              </div>
-                            </button>
-                          ))}
+                    ))}
+                    {allTasks.filter(t => !t.done && t.status !== 'resolved').length === 0 && (
+                      <p className="text-[12px] text-slate-400 italic py-2 text-center">No pending action items.</p>
+                    )}
+                  </div>
+                  <div className="pt-2.5 border-t border-slate-100 flex items-center gap-2 text-[12px] font-semibold">
+                    <button onClick={() => { setEditActionTask(undefined); setShowActionModal(true); }} className="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1">
+                      + Add
+                    </button>
+                    <span className="text-slate-300">·</span>
+                    <button onClick={() => setActiveMainTab('actions')} className="text-slate-600 hover:text-indigo-600 hover:underline flex items-center gap-1">
+                      View all →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Glance Goals */}
+                <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-2xs shrink-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-bold text-slate-900 text-[14px]">Goals</h3>
+                    <span className="bg-blue-50 text-blue-700 font-bold text-[11px] px-2 py-0.5 rounded-full">
+                      {mockUser.goals.filter(g => !g.parentId).length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 mb-3">
+                    {mockUser.goals.filter(g => !g.parentId).slice(0, 4).map((g: Goal) => (
+                      <div 
+                        key={g.id} 
+                        onClick={() => { setEditGoal(g); setShowGoalModal(true); }}
+                        className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-transparent hover:border-slate-200 group"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${
+                            g.status === 'at_risk' ? 'bg-amber-500' :
+                            g.status === 'off_track' ? 'bg-red-500' :
+                            'bg-emerald-500'
+                          }`} />
+                          <span className="text-[13px] font-medium text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{g.title}</span>
                         </div>
-                      ) : (
-                        <div className="px-4 py-4 text-[12px] text-slate-400 text-center">No suggestions. Check your API key in .env.local</div>
-                      )}
-                    </div>
-                  )}
+                        <span className="text-[12px] font-semibold text-slate-500 shrink-0">{g.progress || 0}%</span>
+                      </div>
+                    ))}
+                    {mockUser.goals.filter(g => !g.parentId).length === 0 && (
+                      <p className="text-[12px] text-slate-400 italic py-2 text-center">No goals recorded yet.</p>
+                    )}
+                  </div>
+                  <div className="pt-2.5 border-t border-slate-100 flex items-center gap-2 text-[12px] font-semibold">
+                    <button onClick={() => { setEditGoal(undefined); setShowGoalModal(true); }} className="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1">
+                      + Add
+                    </button>
+                    <span className="text-slate-300">·</span>
+                    <button onClick={() => setActiveMainTab('goals')} className="text-slate-600 hover:text-indigo-600 hover:underline flex items-center gap-1">
+                      View all →
+                    </button>
+                  </div>
+                </div>
 
-                 <div className="bg-white border border-slate-200 rounded-md shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
-                   <div className="overflow-y-auto flex-1 p-5 bg-white">
-                     <div className="space-y-4">
-                       {mockUser.goals.filter(g => !g.parentId).map((goal: Goal) => {
-                         const subgoals = mockUser.goals.filter(sg => sg.parentId === goal.id);
-                         const isExpanded = expandedGoals.has(goal.id);
-                         const sInfo = STATUS_OPTIONS.find(s => s.value === (goal.status || 'on_track')) || STATUS_OPTIONS[0];
-
-                         return (
-                           <div key={goal.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm transition-all hover:border-slate-300">
-                             {/* Parent Row */}
-                             <div className="group flex flex-col p-4 border-b border-slate-100 transition-colors">
-                               <div className="flex items-start gap-4">
-                                 <button onClick={() => toggleExpand(goal.id)} className="text-slate-400 hover:text-slate-600 mt-2.5 shrink-0">
-                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                 </button>
-                                 
-                                 <ProgressRing progress={goal.progress} colorClass={sInfo.color} size={40} />
-                                 
-                                 <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
-                                   <div className="min-w-0 flex-1">
-                                     <span className="text-[15px] font-semibold text-slate-900 truncate block hover:text-indigo-600 transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setEditGoal(goal); setShowGoalModal(true); }}>
-                                       {goal.title}
-                                     </span>
-                                     <div className="flex items-center gap-3 mt-1.5">
-                                       <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-semibold ${getBadgeClass(goal.status || 'on_track')}`}>
-                                         {sInfo.label}
-                                       </span>
-                                       {(goal.status === 'at_risk' || goal.status === 'off_track') && (
-                                         <RiskExplanationPopover goalId={goal.id} reporteeId={mockUser.id} />
-                                       )}
-                                       <div className="w-32">
-                                         <GoalProgressSlider reporteeId={mockUser.id} goal={goal} readOnly={subgoals.length > 0} />
-                                       </div>
-                                     </div>
-                                   </div>
-                                   <button onClick={(e) => { e.stopPropagation(); setEditGoal(goal); setShowGoalModal(true); }} className="p-1.5 text-slate-400 hover:text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                     <Pencil className="w-4 h-4" />
-                                   </button>
-                                 </div>
-                               </div>
-                             </div>
-                             
-                             {/* Subgoals */}
-                             {isExpanded && (
-                               <div className="bg-white">
-                                 <div className="relative border-l border-slate-200 ml-6 pl-5 py-2">
-                                   {subgoals.map(sg => {
-                                     const sgInfo = STATUS_OPTIONS.find(s => s.value === (sg.status || 'on_track')) || STATUS_OPTIONS[0];
-                                     return (
-                                       <div key={sg.id} className="group flex flex-col py-3 pr-4 relative border-b border-slate-50 last:border-0">
-                                         <div className="absolute -left-5 top-7 w-4 h-px bg-slate-200" />
-                                         <div className="flex items-start gap-4 pl-1">
-                                           <ProgressRing progress={sg.progress} colorClass={sgInfo.color} size={32} />
-                                           
-                                           <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
-                                             <div className="min-w-0 flex-1">
-                                               <span className="text-[13.5px] font-medium text-slate-800 truncate block hover:text-indigo-600 transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setEditGoal(sg); setShowGoalModal(true); }}>
-                                                 {sg.title}
-                                               </span>
-                                               <div className="flex items-center gap-3 mt-1.5">
-                                                 <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold ${getBadgeClass(sg.status || 'on_track')}`}>
-                                                   {sgInfo.label}
-                                                 </span>
-                                                 {(sg.status === 'at_risk' || sg.status === 'off_track') && (
-                                                   <RiskExplanationPopover goalId={sg.id} reporteeId={mockUser.id} />
-                                                 )}
-                                                 <div className="w-28">
-                                                   <GoalProgressSlider reporteeId={mockUser.id} goal={sg} />
-                                                 </div>
-                                               </div>
-                                             </div>
-                                             <button onClick={(e) => { e.stopPropagation(); setEditGoal(sg); setShowGoalModal(true); }} className="p-1.5 text-slate-400 hover:text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                               <Pencil className="w-3.5 h-3.5" />
-                                             </button>
-                                           </div>
-                                         </div>
-                                       </div>
-                                     );
-                                   })}
-                                   
-                                   <div className="py-2.5 relative">
-                                      <div className="absolute -left-5 top-1/2 w-4 h-px bg-slate-200" />
-                                      <button onClick={() => { 
-                                        const event = new CustomEvent('open-add-subgoal', { detail: { parentId: goal.id } });
-                                        window.dispatchEvent(event);
-                                      }} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-full text-[12px] font-medium text-slate-600 hover:text-slate-900 shadow-sm transition-colors">
-                                        <Plus className="w-3 h-3" /> Add subgoal
-                                      </button>
-                                   </div>
-                                 </div>
-                               </div>
-                             )}
-                           </div>
-                         );
-                       })}
-                       {mockUser.goals.length === 0 && <p className="text-[13px] text-slate-400 p-8 text-center">No goals yet.</p>}
-                     </div>
-                   </div>
-                   <div className="border-t border-slate-100 bg-slate-50/30 p-2 flex justify-center shrink-0">
-                     <Link href={`/goals?user=${encodeURIComponent(mockUser.name)}`} className="text-[13px] text-slate-500 hover:text-slate-800 transition-colors font-medium">View all →</Link>
-                   </div>
-                 </div>
               </div>
-              )}
+            </Panel>
+          </PanelGroup>
+        )}
 
-              {/* Action Items Section */}
-              {rightTab === 'tasks' && (
-                <div className="flex flex-col h-full">
-                 <div className="flex justify-between items-center mb-3 shrink-0">
-                   <h3 className="font-semibold text-slate-900 text-[15px]">Action Items</h3>
-                   <button 
-                     onClick={() => { setEditActionTask(undefined); setShowActionModal(true); }}
-                     className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
-                   >
-                     <Plus className="w-3.5 h-3.5" /> Action
-                   </button>
-                 </div>
-
-                 <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
-                   <div className="flex-1 overflow-y-auto">
-                     <div className="flex flex-col">
-
-                       {allTasks.map((task: Task) => (
-                         <TaskItem key={task.id} reporteeId={mockUser.id} task={task} onEdit={(t) => { setEditActionTask(t); setShowActionModal(true); }} />
-                       ))}
-                       {allTasks.length === 0 && <p className="text-[13px] text-slate-400 py-8 text-center">No action items.</p>}
-                     </div>
-                   </div>
-                   <div className="border-t border-slate-100 bg-slate-50/30 p-2 flex justify-center shrink-0">
-                     <Link href={`/actions?user=${encodeURIComponent(mockUser.name)}`} className="text-[13px] text-slate-500 hover:text-slate-800 transition-colors font-medium">View all →</Link>
-                   </div>
-                 </div>
+        {/* 2. Full Actions Tab */}
+        {activeMainTab === 'actions' && (
+          <div className="flex flex-col flex-1 min-h-[560px] pb-4">
+            <div className="flex justify-between items-center mb-4 shrink-0">
+              <div>
+                <h3 className="font-bold text-slate-900 text-[16px]">All Action Items</h3>
+                <p className="text-[12px] text-slate-500">Track and manage tasks assigned to or involving {mockUser.name}</p>
               </div>
-              )}
-
+              <button 
+                onClick={() => { setEditActionTask(undefined); setShowActionModal(true); }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[13px] font-semibold transition shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> Add Action
+              </button>
             </div>
-          </Panel>
-        </PanelGroup>
+
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-2">
+                {allTasks.map((task: Task) => (
+                  <TaskItem key={task.id} reporteeId={mockUser.id} task={task} onEdit={(t) => { setEditActionTask(t); setShowActionModal(true); }} />
+                ))}
+                {allTasks.length === 0 && <p className="text-[13px] text-slate-400 py-12 text-center italic">No action items found.</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Full Goals Tab */}
+        {activeMainTab === 'goals' && (
+          <div className="flex flex-col flex-1 min-h-[560px] pb-4">
+            <div className="flex justify-between items-center mb-4 shrink-0">
+              <div>
+                <h3 className="font-bold text-slate-900 text-[16px]">Goals & Objectives</h3>
+                <p className="text-[12px] text-slate-500">Manage career milestones, quarterly targets, and subgoals for {mockUser.name}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchSuggestedGoals}
+                  disabled={suggestLoading}
+                  className="flex items-center gap-1 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-[13px] font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm disabled:opacity-60"
+                >
+                  <span className={suggestLoading ? "animate-spin inline-block" : ""}>✨</span>
+                  {suggestLoading ? "Generating..." : "Suggest AI Goals"}
+                </button>
+                <button
+                  onClick={() => { setEditGoal(undefined); setShowGoalModal(true); }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[13px] font-semibold transition shadow-sm"
+                >
+                  <Plus className="w-4 h-4" /> Add Goal
+                </button>
+              </div>
+            </div>
+
+            {/* AI Suggest Panel */}
+            {showSuggestPanel && (
+              <div className="mb-4 border border-indigo-200 bg-indigo-50/40 rounded-xl overflow-hidden shrink-0 shadow-sm">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-indigo-100">
+                  <span className="text-[12px] font-semibold text-indigo-700 uppercase tracking-wider">✨ AI Suggestions</span>
+                  <div className="flex items-center gap-2">
+                    {selectedGoalIdxs.size > 0 && (
+                      <button
+                        onClick={addSelectedGoals}
+                        disabled={addingGoals}
+                        className="px-3 py-1.5 text-[12px] font-semibold bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors disabled:opacity-60"
+                      >
+                        {addingGoals ? "Adding..." : `Add ${selectedGoalIdxs.size} goal${selectedGoalIdxs.size > 1 ? "s" : ""}`}
+                      </button>
+                    )}
+                    <button onClick={() => { setShowSuggestPanel(false); setSuggestedGoals([]); setSelectedGoalIdxs(new Set()); }} className="text-[13px] text-indigo-400 hover:text-indigo-700">✕</button>
+                  </div>
+                </div>
+                {suggestLoading ? (
+                  <div className="px-4 py-6 text-center text-[13px] text-indigo-500 animate-pulse">✨ Generating smart goal suggestions...</div>
+                ) : suggestedGoals.length > 0 ? (
+                  <div className="divide-y divide-indigo-100 max-h-72 overflow-y-auto">
+                    {suggestedGoals.map((g, i) => (
+                      <button key={i} type="button" onClick={() => toggleSuggestIdx(i)}
+                        className={`w-full text-left px-4 py-3 transition-colors flex items-start gap-3 ${selectedGoalIdxs.has(i) ? "bg-indigo-100" : "hover:bg-indigo-50/60"}`}>
+                        <span className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${selectedGoalIdxs.has(i) ? "bg-indigo-700 border-indigo-700" : "border-indigo-300"}`}>
+                          {selectedGoalIdxs.has(i) && <span className="text-white text-[10px] font-bold">✓</span>}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-slate-800">{g.title}</p>
+                          <p className="text-[12px] text-slate-500 mt-0.5 leading-relaxed">{g.description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-4 text-[13px] text-slate-400 text-center">No suggestions. Check your API key in .env.local</div>
+                )}
+              </div>
+            )}
+
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="overflow-y-auto flex-1 p-6 bg-white">
+                <div className="space-y-4">
+                  {mockUser.goals.filter(g => !g.parentId).map((goal: Goal) => {
+                    const subgoals = mockUser.goals.filter(sg => sg.parentId === goal.id);
+                    const isExpanded = expandedGoals.has(goal.id);
+                    const sInfo = STATUS_OPTIONS.find(s => s.value === (goal.status || 'on_track')) || STATUS_OPTIONS[0];
+
+                    return (
+                      <div key={goal.id} className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs transition-all hover:border-slate-300">
+                        {/* Parent Row */}
+                        <div className="group flex flex-col p-4 border-b border-slate-100 transition-colors">
+                          <div className="flex items-start gap-4">
+                            <button onClick={() => toggleExpand(goal.id)} className="text-slate-400 hover:text-slate-600 mt-2.5 shrink-0">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </button>
+                            
+                            <ProgressRing progress={goal.progress} colorClass={sInfo.color} size={40} />
+                            
+                            <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[15px] font-semibold text-slate-900 truncate block hover:text-indigo-600 transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setEditGoal(goal); setShowGoalModal(true); }}>
+                                  {goal.title}
+                                </span>
+                                <div className="flex items-center gap-3 mt-1.5">
+                                  <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-semibold ${getBadgeClass(goal.status || 'on_track')}`}>
+                                    {sInfo.label}
+                                  </span>
+                                  {(goal.status === 'at_risk' || goal.status === 'off_track') && (
+                                    <RiskExplanationPopover goalId={goal.id} reporteeId={mockUser.id} />
+                                  )}
+                                  <div className="w-32">
+                                    <GoalProgressSlider reporteeId={mockUser.id} goal={goal} readOnly={subgoals.length > 0} />
+                                  </div>
+                                </div>
+                              </div>
+                              <button onClick={(e) => { e.stopPropagation(); setEditGoal(goal); setShowGoalModal(true); }} className="p-1.5 text-slate-400 hover:text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Subgoals */}
+                        {isExpanded && (
+                          <div className="bg-white">
+                            <div className="relative border-l border-slate-200 ml-6 pl-5 py-2">
+                              {subgoals.map(sg => {
+                                const sgInfo = STATUS_OPTIONS.find(s => s.value === (sg.status || 'on_track')) || STATUS_OPTIONS[0];
+                                return (
+                                  <div key={sg.id} className="group flex flex-col py-3 pr-4 relative border-b border-slate-50 last:border-0">
+                                    <div className="absolute -left-5 top-7 w-4 h-px bg-slate-200" />
+                                    <div className="flex items-start gap-4 pl-1">
+                                      <ProgressRing progress={sg.progress} colorClass={sgInfo.color} size={32} />
+                                      
+                                      <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
+                                        <div className="min-w-0 flex-1">
+                                          <span className="text-[13.5px] font-medium text-slate-800 truncate block hover:text-indigo-600 transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setEditGoal(sg); setShowGoalModal(true); }}>
+                                            {sg.title}
+                                          </span>
+                                          <div className="flex items-center gap-3 mt-1.5">
+                                            <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold ${getBadgeClass(sg.status || 'on_track')}`}>
+                                              {sgInfo.label}
+                                            </span>
+                                            {(sg.status === 'at_risk' || sg.status === 'off_track') && (
+                                              <RiskExplanationPopover goalId={sg.id} reporteeId={mockUser.id} />
+                                            )}
+                                            <div className="w-28">
+                                              <GoalProgressSlider reporteeId={mockUser.id} goal={sg} />
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <button onClick={(e) => { e.stopPropagation(); setEditGoal(sg); setShowGoalModal(true); }} className="p-1.5 text-slate-400 hover:text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                          <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              
+                              <div className="py-2.5 relative">
+                                 <div className="absolute -left-5 top-1/2 w-4 h-px bg-slate-200" />
+                                 <button onClick={() => { 
+                                   const event = new CustomEvent('open-add-subgoal', { detail: { parentId: goal.id } });
+                                   window.dispatchEvent(event);
+                                 }} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-full text-[12px] font-medium text-slate-600 hover:text-slate-900 shadow-sm transition-colors">
+                                   <Plus className="w-3 h-3" /> Add subgoal
+                                 </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {mockUser.goals.length === 0 && <p className="text-[13px] text-slate-400 p-8 text-center">No goals yet.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {showGoalModal && (
@@ -1283,6 +1461,8 @@ export function ProfileLayoutClient({
                     onClick={async () => {
                       if (confirm(`Are you sure you want to delete ${mockUser.name}?`)) {
                         await deleteReportee(mockUser.id);
+                        await persistAfterMutation();
+                        router.refresh();
                         router.push('/team');
                       }
                     }}
@@ -1322,6 +1502,22 @@ export function ProfileLayoutClient({
           reporteeId={mockUser.id}
           reporteeName={mockUser.name}
           onClose={() => setShowAgenda(false)}
+        />
+      )}
+
+      {showOnboardingModal && (
+        <OnboardingModal
+          reporteeId={mockUser.id}
+          reporteeName={mockUser.name}
+          reporteeRole={mockUser.role || "Software Engineer"}
+          onClose={() => setShowOnboardingModal(false)}
+        />
+      )}
+
+      {showCalendarSync && (
+        <CalendarSyncModal
+          onClose={() => setShowCalendarSync(false)}
+          teamMembers={teamContext || [mockUser]}
         />
       )}
     </div>

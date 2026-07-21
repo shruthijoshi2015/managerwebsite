@@ -2,6 +2,9 @@ import { readDb } from "@/lib/db";
 import { NotesHubClient } from "@/components/NotesHubClient";
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function NotesHubPage() {
   const db = readDb();
   return (

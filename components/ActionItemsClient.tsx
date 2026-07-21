@@ -5,6 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Search, List, LayoutGrid, CheckCircle2, Circle, AlertCircle, Clock, ChevronDown, MessageSquare, Paperclip, ArrowUpDown, ArrowUp, ArrowDown, Check, Pencil, X, Plus } from "lucide-react";
 import { ActionModal } from "./ActionModal";
 import { useIndexedDB } from "./IndexedDBProvider";
+import { formatDate } from "@/lib/formatDate";
+import { isTaskOverdue, getDaysOverdue } from "@/lib/proactive-engine";
+import { BulkActionBar } from "./BulkActionBar";
 
 type SortDir = "asc" | "desc" | null;
 type SortCol = "task" | "member" | "priority" | "status" | "timeframe" | null;
@@ -140,6 +143,64 @@ export function ActionItemsClient({ team }: { team: any[] }) {
   const [sortCol, setSortCol] = useState<SortCol>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
   const [colFilters, setColFilters] = useState<Partial<Record<string, string[]>>>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === filteredItems.length && filteredItems.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredItems.map(item => item.id));
+    }
+  };
+
+  const handleToggleSelectItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBulkUpdateStatus = async (newStatus: string) => {
+    try {
+      const selectedItems = filteredItems.filter(item => selectedIds.includes(item.id));
+      for (const item of selectedItems) {
+        await fetch("/api/update-action-item", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemId: item.id,
+            reporteeId: item.member.id,
+            status: newStatus
+          })
+        });
+      }
+      await persistAfterMutation();
+      setSelectedIds([]);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleBulkExportCsv = () => {
+    const selectedItems = filteredItems.filter(item => selectedIds.includes(item.id));
+    const csvRows = [
+      ['Task Description', 'Assignee', 'Priority', 'Status', 'Due Date'],
+      ...selectedItems.map(item => [
+        `"${item.task.replace(/"/g, '""')}"`,
+        `"${item.member.name}"`,
+        item.priority,
+        item.status,
+        `"${item.timeframe}"`
+      ])
+    ];
+    const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.map(e => e.join(',')).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `action-items-${formatDate(new Date().toISOString())}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const toggleColFilter = (col: string, val: string) => {
     setColFilters(prev => {
@@ -171,24 +232,32 @@ export function ActionItemsClient({ team }: { team: any[] }) {
               const status = isResolved ? 'resolved' : charCode % 2 === 0 ? 'in_progress' : 'pending';
               const priority = charCode % 3 === 0 ? 'P0' : charCode % 2 === 0 ? 'P1' : 'P2';
               
-              items.push({
-                id: `ai-${note.id}-${i}`,
-                task: fUp.task,
-                timeframe: fUp.timeframe,
-                status,
-                priority,
-                noteType: note.type,
-                owner: fUp.owner || 'reportee',
-                date: note.date,
-                member: { id: member.id, name: member.name, role: member.role, avatar: member.name.substring(0, 2).toUpperCase(), colorIndex: member.id }
+                const taskObj = { id: 0, title: fUp.task, done: isResolved, status: status as any, priority: priority as any, timeframe: fUp.timeframe };
+                const overdue = isTaskOverdue(taskObj);
+                const daysOver = getDaysOverdue(taskObj);
+
+                items.push({
+                  id: `ai-${note.id}-${i}`,
+                  task: fUp.task,
+                  timeframe: fUp.timeframe,
+                  status,
+                  priority,
+                  noteType: note.type,
+                  owner: fUp.owner || 'reportee',
+                  date: note.date,
+                  isOverdue: overdue,
+                  daysOverdue: daysOver,
+                  member: { id: member.id, name: member.name, role: member.role, avatar: member.name.substring(0, 2).toUpperCase(), colorIndex: member.id }
+                });
               });
-            });
           }
         });
       }
       
       if (member.tasks) {
         member.tasks.forEach((task: any) => {
+          const overdue = isTaskOverdue(task);
+          const daysOver = getDaysOverdue(task);
           items.push({
             id: `manual-${task.id}`,
             task: task.title,
@@ -198,6 +267,8 @@ export function ActionItemsClient({ team }: { team: any[] }) {
             noteType: 'Manual Task',
             owner: task.owner || 'reportee',
             date: task.completedAt || new Date().toISOString(),
+            isOverdue: overdue,
+            daysOverdue: daysOver,
             member: { id: member.id, name: member.name, role: member.role, avatar: member.name.substring(0, 2).toUpperCase(), colorIndex: member.id }
           });
         });
@@ -289,6 +360,12 @@ export function ActionItemsClient({ team }: { team: any[] }) {
     return "bg-sky-50 text-sky-700 border-sky-200";
   };
 
+  const displayTimeframe = (tf: string) => {
+    if (!tf || tf === 'No Due Date') return tf;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(tf)) return formatDate(tf);
+    return tf;
+  };
+
   if (!mounted) return null;
 
   return (
@@ -360,6 +437,14 @@ export function ActionItemsClient({ team }: { team: any[] }) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[12px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="px-4 py-4 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={filteredItems.length > 0 && selectedIds.length === filteredItems.length}
+                    onChange={handleToggleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                </th>
                 <th className="px-6 py-4"><ColHeader label="Task Description" col="task" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} /></th>
                 <th className="px-6 py-4"><ColHeader label="Assignee" col="member" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} filterValues={memberValues} activeFilters={colFilters.member} onFilter={v=>toggleColFilter("member",v)} /></th>
                 <th className="px-6 py-4"><ColHeader label="Priority" col="priority" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} filterValues={priorityValues} activeFilters={colFilters.priority} onFilter={v=>toggleColFilter("priority",v)} /></th>
@@ -370,7 +455,15 @@ export function ActionItemsClient({ team }: { team: any[] }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredItems.map(item => (
-                <tr key={item.id} onClick={() => handleEditClick(item)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                <tr key={item.id} onClick={() => handleEditClick(item)} className={`transition-colors group cursor-pointer ${item.isOverdue && item.status !== 'resolved' ? 'bg-red-50/40 hover:bg-red-50 border-l-4 border-l-red-500' : 'hover:bg-slate-50/50'}`}>
+                  <td className="px-4 py-4 text-center" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={e => handleToggleSelectItem(item.id, e as any)}
+                      className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-3">
                       <button type="button" onClick={(e) => handleToggleStatus(item, e)} className="mt-0.5 p-0.5 hover:scale-110 transition-transform cursor-pointer focus:outline-none shrink-0" title={item.status === 'resolved' ? "Mark unresolved" : "Mark resolved (close)"}>
@@ -382,6 +475,11 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                         </span>
                         {item.owner === 'manager' && (
                           <span className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-slate-100 text-slate-600 rounded-sm shrink-0 whitespace-nowrap">My Action</span>
+                        )}
+                        {item.isOverdue && item.status !== 'resolved' && (
+                          <span className="px-2 py-0.5 text-[10px] uppercase font-extrabold bg-red-500 text-white rounded-full shadow-xs animate-pulse">
+                            🔴 Overdue {item.daysOverdue ? `by ${item.daysOverdue}d` : ''}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -406,7 +504,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-[12px] font-semibold text-slate-500">
-                      {item.timeframe}
+                      {displayTimeframe(item.timeframe)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -418,7 +516,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
               ))}
               {filteredItems.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="max-w-md mx-auto py-6">
                       <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
                         <Search className="w-6 h-6" />
@@ -466,16 +564,23 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                 
                   <div className="px-4 pb-4 flex flex-col gap-3 flex-1 overflow-y-auto">
                     {group.items.map(item => (
-                      <div key={item.id} onClick={() => handleEditClick(item)} className={`bg-white border ${item.status === 'resolved' ? 'border-slate-100 opacity-60' : 'border-slate-200'} rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative cursor-pointer`}>
+                      <div key={item.id} onClick={() => handleEditClick(item)} className={`bg-white border ${item.status === 'resolved' ? 'border-slate-100 opacity-60' : item.isOverdue ? 'border-l-4 border-l-red-500 border-red-300 bg-red-50/30' : 'border-slate-200'} rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative cursor-pointer`}>
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
                             <button type="button" onClick={(e) => handleToggleStatus(item, e)} className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0 flex items-center justify-center text-white bg-white hover:border-indigo-500 transition-colors cursor-pointer focus:outline-none" title={item.status === 'resolved' ? "Mark unresolved" : "Mark resolved (close)"}>
                               {item.status === 'resolved' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
                             </button>
                             <div className="flex flex-col gap-1 min-w-0 flex-1">
-                              <p className={`text-[14px] font-bold leading-snug ${item.status === 'resolved' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                                {item.task}
-                              </p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className={`text-[14px] font-bold leading-snug ${item.status === 'resolved' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                  {item.task}
+                                </p>
+                                {item.isOverdue && item.status !== 'resolved' && (
+                                  <span className="px-1.5 py-0.5 text-[9px] uppercase font-extrabold bg-red-500 text-white rounded-full animate-pulse">
+                                    Overdue {item.daysOverdue ? `${item.daysOverdue}d` : ''}
+                                  </span>
+                                )}
+                              </div>
                               {item.owner === 'manager' && (
                                 <span className="w-fit px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold bg-slate-100 text-slate-600 rounded-sm shrink-0 whitespace-nowrap">My Action</span>
                               )}
@@ -495,7 +600,7 @@ export function ActionItemsClient({ team }: { team: any[] }) {
                           </span>
                           <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1 ml-auto">
                              <Clock className="w-3 h-3" />
-                             {item.timeframe === 'No Due Date' ? 'No date' : item.timeframe}
+                             {item.timeframe === 'No Due Date' ? 'No date' : displayTimeframe(item.timeframe)}
                           </span>
                         </div>
                         
@@ -540,6 +645,14 @@ export function ActionItemsClient({ team }: { team: any[] }) {
           onClose={() => setEditingItem(null)}
         />
       )}
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        itemType="tasks"
+        onUpdateStatus={handleBulkUpdateStatus}
+        onExportCsv={handleBulkExportCsv}
+        onClear={() => setSelectedIds([])}
+      />
     </div>
   );
 }

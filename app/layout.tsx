@@ -33,13 +33,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-screen overflow-hidden antialiased`}
     >
-      <body className="bg-[#fafafa] text-slate-800 min-h-screen flex font-sans text-[13px] leading-relaxed">
+      <body className="bg-[#fafafa] text-slate-800 h-screen overflow-hidden flex font-sans text-[13px] leading-relaxed">
         <CardConfigProvider initialConfig={db.config.cardConfig} initialGoalModalConfig={db.config.goalModalConfig}>
           <IndexedDBProvider>
             <Sidebar teamMembers={teamMembers} />
-            <main className="flex-1 overflow-y-auto h-screen">
+            <main className="flex-1 overflow-y-auto h-screen min-w-0">
               {children}
             </main>
             <CoachMeChat />

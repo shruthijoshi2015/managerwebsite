@@ -2,6 +2,9 @@ import { readDb } from "@/lib/db";
 import { GoalsPageClient } from "@/components/GoalsPageClient";
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function GoalsPage() {
   const db = readDb();
   const allGoals = db.team.flatMap(member =>

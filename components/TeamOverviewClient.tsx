@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { LayoutGrid, List, Search, Plus, X, Loader2, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
-import { addReportee } from '@/lib/actions';
+import { LayoutGrid, List, Search, Plus, X, Loader2, SlidersHorizontal, ArrowUpDown, CheckCircle, CheckSquare } from 'lucide-react';
+import { addReportee, addGoal, addTask } from '@/lib/actions';
 import { TeamCard } from './TeamCard';
 import { TeamListRow } from './TeamListRow';
 import { useCardConfig } from '@/lib/CardConfigContext';
 import { useRouter } from 'next/navigation';
 import { useIndexedDB } from './IndexedDBProvider';
 import { PrepBriefPanel } from './PrepBriefPanel';
+import { BulkActionBar } from './BulkActionBar';
+import { formatDate } from '@/lib/formatDate';
 
 type EnhancedMember = {
   id: number;
@@ -69,6 +71,110 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
   const roles = Array.from(new Set(teamMembers.map(m => m.role)));
 
   const [prepTarget, setPrepTarget] = useState<{ id: number; name: string } | null>(null);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
+  const [showBatchAssignModal, setShowBatchAssignModal] = useState(false);
+  const [batchGoalTitle, setBatchGoalTitle] = useState('');
+  const [batchGoalDesc, setBatchGoalDesc] = useState('');
+  const [batchGoalPriority, setBatchGoalPriority] = useState('P1');
+  const [batchGoalDueDate, setBatchGoalDueDate] = useState('');
+  const [isBatchAssigning, setIsBatchAssigning] = useState(false);
+  const [batchSuccessMsg, setBatchSuccessMsg] = useState(false);
+
+  const [showBatchTaskModal, setShowBatchTaskModal] = useState(false);
+  const [batchTaskTitle, setBatchTaskTitle] = useState('');
+  const [batchTaskPriority, setBatchTaskPriority] = useState<'P0' | 'P1' | 'P2'>('P1');
+  const [batchTaskTimeframe, setBatchTaskTimeframe] = useState('');
+  const [isBatchTaskAssigning, setIsBatchTaskAssigning] = useState(false);
+  const [batchTaskSuccessMsg, setBatchTaskSuccessMsg] = useState(false);
+
+  const handleBatchTaskSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!batchTaskTitle.trim() || selectedMemberIds.length === 0) return;
+    setIsBatchTaskAssigning(true);
+    for (const mId of selectedMemberIds) {
+      const fd = new FormData();
+      fd.set("title", batchTaskTitle);
+      fd.set("priority", batchTaskPriority);
+      if (batchTaskTimeframe) fd.set("timeframe", batchTaskTimeframe);
+      fd.set("owner", "reportee");
+      await addTask(mId, fd);
+    }
+    await persistAfterMutation();
+    setIsBatchTaskAssigning(false);
+    setBatchTaskSuccessMsg(true);
+    setTimeout(() => {
+      setBatchTaskSuccessMsg(false);
+      setShowBatchTaskModal(false);
+      setSelectedMemberIds([]);
+      setBatchTaskTitle('');
+      setBatchTaskTimeframe('');
+      router.refresh();
+    }, 1200);
+  };
+
+  const handleBatchAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!batchGoalTitle.trim() || selectedMemberIds.length === 0) return;
+    setIsBatchAssigning(true);
+    for (const mId of selectedMemberIds) {
+      const fd = new FormData();
+      fd.set("title", batchGoalTitle);
+      fd.set("description", batchGoalDesc);
+      fd.set("status", "on_track");
+      fd.set("icon", "🎯");
+      fd.set("priority", batchGoalPriority);
+      if (batchGoalDueDate) fd.set("dueDate", batchGoalDueDate);
+      fd.set("tags", JSON.stringify(["Assigned-by-Manager"]));
+      await addGoal(mId, fd);
+    }
+    await persistAfterMutation();
+    setIsBatchAssigning(false);
+    setBatchSuccessMsg(true);
+    setTimeout(() => {
+      setBatchSuccessMsg(false);
+      setShowBatchAssignModal(false);
+      setSelectedMemberIds([]);
+      setBatchGoalTitle('');
+      setBatchGoalDesc('');
+      router.refresh();
+    }, 1200);
+  };
+
+  const handleToggleSelectAllMembers = () => {
+    if (selectedMemberIds.length === sortedMembers.length && sortedMembers.length > 0) {
+      setSelectedMemberIds([]);
+    } else {
+      setSelectedMemberIds(sortedMembers.map(m => m.id));
+    }
+  };
+
+  const handleToggleSelectMember = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedMemberIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBulkExportMembersCsv = () => {
+    const selected = sortedMembers.filter(m => selectedMemberIds.includes(m.id));
+    const csvRows = [
+      ['Name', 'Role', 'Department', 'Active Tasks', 'Active Goals', 'Goals Avg Progress (%)'],
+      ...selected.map(m => [
+        `"${m.name}"`,
+        `"${m.role}"`,
+        `"${m.department}"`,
+        m.activeTasksCount,
+        m.activeGoalsCount,
+        Math.round(m.goalsProgressAvg)
+      ])
+    ];
+    const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.map(e => e.join(',')).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `team-members-${formatDate(new Date().toISOString())}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const filteredMembers = teamMembers.filter(m => {
     const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.role.toLowerCase().includes(search.toLowerCase()) || m.department.toLowerCase().includes(search.toLowerCase());
@@ -165,31 +271,54 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
       {view === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
           {sortedMembers.map(member => (
-            <TeamCard key={member.id} member={member} config={cardConfig} onPrep={(id, name) => setPrepTarget({ id, name })} />
+            <div key={member.id} className="relative group">
+              <div className="absolute top-3 right-3 z-10" onClick={e => handleToggleSelectMember(member.id, e)}>
+                <input
+                  type="checkbox"
+                  checked={selectedMemberIds.includes(member.id)}
+                  onChange={() => {}}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm bg-white"
+                />
+              </div>
+              <TeamCard member={member} config={cardConfig} onPrep={(id, name) => setPrepTarget({ id, name })} />
+            </div>
           ))}
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div role="grid" aria-label="Team Members Overview" aria-rowcount={sortedMembers.length + 1} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           {/* Table header */}
-          <div className="flex items-center border-b border-slate-200 bg-slate-50/80 px-0">
+          <div role="row" className="flex items-center border-b border-slate-200 bg-slate-50/80 px-0">
+            <div role="columnheader" className="px-4 py-3 shrink-0">
+              <input
+                type="checkbox"
+                aria-label="Select all team members"
+                checked={sortedMembers.length > 0 && selectedMemberIds.length === sortedMembers.length}
+                onChange={handleToggleSelectAllMembers}
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+            </div>
             {/* Left bar spacer */}
-            <div className="w-[3px] self-stretch" />
+            <div role="presentation" className="w-[3px] self-stretch" />
 
             {/* MEMBER */}
-            <button
-              onClick={() => handleSort('name')}
-              className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase pl-5 pr-4 py-3 hover:text-slate-700 transition-colors"
-              style={{ width: 260 }}
-            >
-              MEMBER <ArrowUpDown className="w-3 h-3" />
-            </button>
+            <div role="columnheader" aria-sort={sortKey === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+              <button
+                onClick={() => handleSort('name')}
+                className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase pl-5 pr-4 py-3 hover:text-slate-700 transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500"
+                style={{ width: 260 }}
+              >
+                MEMBER <ArrowUpDown className="w-3 h-3" aria-hidden="true" />
+              </button>
+            </div>
 
             {/* STATUS */}
             <div
+              role="columnheader"
+              aria-sort="none"
               className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0"
               style={{ width: 150 }}
             >
-              STATUS <ArrowUpDown className="w-3 h-3 inline ml-1" />
+              STATUS <ArrowUpDown className="w-3 h-3 inline ml-1" aria-hidden="true" />
             </div>
 
             {/* DYNAMIC COLUMNS */}
@@ -198,42 +327,48 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
                 case 'showDepartment':
                   if (cardConfig.showDepartment === false) return null;
                   return (
-                    <div key={key} className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0" style={{ width: 140 }}>
+                    <div key={key} role="columnheader" aria-sort="none" className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0" style={{ width: 140 }}>
                       DEPARTMENT
                     </div>
                   );
                 case 'showGoalProgress':
                   if (cardConfig.showGoalProgress === false) return null;
                   return (
-                    <button key={key} onClick={() => handleSort('progress')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0" style={{ width: 120 }}>
-                      PROGRESS <ArrowUpDown className="w-3 h-3" />
-                    </button>
+                    <div key={key} role="columnheader" aria-sort={sortKey === 'progress' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                      <button onClick={() => handleSort('progress')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-indigo-500" style={{ width: 120 }}>
+                        PROGRESS <ArrowUpDown className="w-3 h-3" aria-hidden="true" />
+                      </button>
+                    </div>
                   );
                 case 'showProgressTrend':
                   if (cardConfig.showProgressTrend === false) return null;
                   return (
-                    <div key={key} className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0" style={{ width: 120 }}>
+                    <div key={key} role="columnheader" aria-sort="none" className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0" style={{ width: 120 }}>
                       TREND
                     </div>
                   );
                 case 'showWorkload':
                   if (cardConfig.showWorkload === false) return null;
                   return (
-                    <button key={key} onClick={() => handleSort('workload')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0" style={{ width: 140 }}>
-                      WORKLOAD <ArrowUpDown className="w-3 h-3" />
-                    </button>
+                    <div key={key} role="columnheader" aria-sort={sortKey === 'workload' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                      <button onClick={() => handleSort('workload')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-indigo-500" style={{ width: 140 }}>
+                        WORKLOAD <ArrowUpDown className="w-3 h-3" aria-hidden="true" />
+                      </button>
+                    </div>
                   );
                 case 'showMeetingDates':
                   if (cardConfig.showMeetingDates === false) return null;
                   return (
-                    <button key={key} onClick={() => handleSort('next1on1')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0" style={{ width: 170 }}>
-                      NEXT 1:1 <ArrowUpDown className="w-3 h-3" />
-                    </button>
+                    <div key={key} role="columnheader" aria-sort={sortKey === 'next1on1' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                      <button onClick={() => handleSort('next1on1')} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 hover:text-slate-700 transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-indigo-500" style={{ width: 170 }}>
+                        NEXT 1:1 <ArrowUpDown className="w-3 h-3" aria-hidden="true" />
+                      </button>
+                    </div>
                   );
                 case 'showQuickStats':
                   if (cardConfig.showQuickStats === false) return null;
                   return (
-                    <div key={key} className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0" style={{ width: 140 }}>
+                    <div key={key} role="columnheader" aria-sort="none" className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase px-4 py-3 shrink-0" style={{ width: 140 }}>
                       QUICK STATS
                     </div>
                   );
@@ -243,13 +378,25 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
             })}
             
             {/* Spacer */}
-            <div className="flex-1" />
+            <div role="presentation" className="flex-1" />
           </div>
 
           {/* Rows */}
-          <div>
-            {sortedMembers.map(member => (
-              <TeamListRow key={member.id} member={member} config={cardConfig} onPrep={(id, name) => setPrepTarget({ id, name })} />
+          <div role="rowgroup">
+            {sortedMembers.map((member, idx) => (
+              <div key={member.id} role="row" aria-rowindex={idx + 2} className="flex items-center hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-0 relative">
+                <div className="px-4 py-4 shrink-0 z-10" onClick={e => handleToggleSelectMember(member.id, e)}>
+                  <input
+                    type="checkbox"
+                    checked={selectedMemberIds.includes(member.id)}
+                    onChange={() => {}}
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <TeamListRow member={member} config={cardConfig} onPrep={(id, name) => setPrepTarget({ id, name })} />
+                </div>
+              </div>
             ))}
             {sortedMembers.length === 0 && (
               <div className="py-12 text-center text-slate-400 text-[13px]">No team members match your search.</div>
@@ -318,6 +465,212 @@ export function TeamOverviewClient({ teamMembers }: { teamMembers: EnhancedMembe
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      <BulkActionBar
+        selectedCount={selectedMemberIds.length}
+        itemType="members"
+        onAssignGoal={() => setShowBatchAssignModal(true)}
+        onAssignTask={() => setShowBatchTaskModal(true)}
+        onExportCsv={handleBulkExportMembersCsv}
+        onClear={() => setSelectedMemberIds([])}
+      />
+
+      {showBatchAssignModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+              <div>
+                <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Bulk Operation</span>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  🎯 Assign Goal to {selectedMemberIds.length} {selectedMemberIds.length === 1 ? 'Member' : 'Members'}
+                </h2>
+              </div>
+              <button onClick={() => setShowBatchAssignModal(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {batchSuccessMsg ? (
+              <div className="py-8 text-center animate-in fade-in">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">✨</div>
+                <h3 className="text-base font-bold text-slate-900">Goal Assigned Successfully!</h3>
+                <p className="text-[13px] text-slate-500 mt-1">Applied to {selectedMemberIds.length} selected team members.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleBatchAssignSubmit} className="space-y-4">
+                <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-[13px] text-indigo-900 flex items-start gap-2">
+                  <span className="text-base shrink-0">👥</span>
+                  <div>
+                    <span className="font-semibold">Recipients: </span>
+                    {teamMembers.filter(m => selectedMemberIds.includes(m.id)).map(m => m.name).join(", ")}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold text-slate-700 mb-1">Goal Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={batchGoalTitle}
+                    onChange={e => setBatchGoalTitle(e.target.value)}
+                    placeholder="e.g. Complete Q3 OKR Review & Architecture Sync"
+                    className="w-full px-3.5 py-2 text-[13px] border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold text-slate-700 mb-1">Description / Key Results</label>
+                  <textarea
+                    rows={3}
+                    value={batchGoalDesc}
+                    onChange={e => setBatchGoalDesc(e.target.value)}
+                    placeholder="Define success criteria, deliverables, or target metrics..."
+                    className="w-full px-3.5 py-2 text-[13px] border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-slate-700 mb-1">Priority</label>
+                    <select
+                      value={batchGoalPriority}
+                      onChange={e => setBatchGoalPriority(e.target.value)}
+                      className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-xl outline-none focus:border-indigo-500 bg-white font-medium"
+                    >
+                      <option value="P0">P0 - Urgent & Critical</option>
+                      <option value="P1">P1 - High Priority</option>
+                      <option value="P2">P2 - Normal / Standard</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[12px] font-semibold text-slate-700 mb-1">Target Due Date</label>
+                    <input
+                      type="date"
+                      value={batchGoalDueDate}
+                      onChange={e => setBatchGoalDueDate(e.target.value)}
+                      className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-xl outline-none focus:border-indigo-500 bg-white font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBatchAssignModal(false)}
+                    className="px-4 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isBatchAssigning || !batchGoalTitle.trim()}
+                    className="flex items-center gap-2 px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-bold rounded-xl shadow-sm transition disabled:opacity-50"
+                  >
+                    {isBatchAssigning && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Assign Goal to {selectedMemberIds.length} {selectedMemberIds.length === 1 ? 'Member' : 'Members'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showBatchTaskModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-slate-100 text-slate-800 rounded-xl">
+                  <CheckSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-[17px] font-bold text-slate-900">Assign Action Task</h3>
+                  <p className="text-xs text-slate-500">Bulk create a task for {selectedMemberIds.length} team members</p>
+                </div>
+              </div>
+              <button onClick={() => setShowBatchTaskModal(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {batchTaskSuccessMsg ? (
+              <div className="py-8 text-center animate-in fade-in">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">✨</div>
+                <h3 className="text-base font-bold text-slate-900">Task Assigned Successfully!</h3>
+                <p className="text-[13px] text-slate-500 mt-1">Applied to {selectedMemberIds.length} selected team members.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleBatchTaskSubmit} className="space-y-4">
+                <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-3 text-[13px] text-emerald-900 flex items-start gap-2">
+                  <span className="text-base shrink-0">👥</span>
+                  <div>
+                    <span className="font-semibold">Recipients: </span>
+                    {teamMembers.filter(m => selectedMemberIds.includes(m.id)).map(m => m.name).join(", ")}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold text-slate-700 mb-1">Task Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={batchTaskTitle}
+                    onChange={e => setBatchTaskTitle(e.target.value)}
+                    placeholder="e.g. Submit mid-quarter self-appraisal"
+                    className="w-full px-3.5 py-2 text-[13px] border border-slate-200 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-slate-700 mb-1">Priority</label>
+                    <select
+                      value={batchTaskPriority}
+                      onChange={e => setBatchTaskPriority(e.target.value as any)}
+                      className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-xl outline-none focus:border-emerald-500 bg-white font-medium"
+                    >
+                      <option value="P0">P0 - Critical</option>
+                      <option value="P1">P1 - High</option>
+                      <option value="P2">P2 - Normal</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[12px] font-semibold text-slate-700 mb-1">Timeframe / Due Date</label>
+                    <input
+                      type="text"
+                      value={batchTaskTimeframe}
+                      onChange={e => setBatchTaskTimeframe(e.target.value)}
+                      placeholder="e.g. By Friday or 2026-07-20"
+                      className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-xl outline-none focus:border-emerald-500 bg-white font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBatchTaskModal(false)}
+                    className="px-4 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isBatchTaskAssigning || !batchTaskTitle.trim()}
+                    className="flex items-center gap-2 px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-bold rounded-xl shadow-sm transition disabled:opacity-50"
+                  >
+                    {isBatchTaskAssigning && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Assign Task to {selectedMemberIds.length} {selectedMemberIds.length === 1 ? 'Member' : 'Members'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

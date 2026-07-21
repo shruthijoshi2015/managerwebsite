@@ -13,22 +13,29 @@ export function UserQuickScratchpad({
   reporteeId, 
   reporteeName,
   onConvertToAction,
-  onConvertToGoal 
+  onConvertToGoal,
+  onCountChange
 }: { 
   reporteeId: number; 
   reporteeName: string;
   onConvertToAction: (text: string) => void;
   onConvertToGoal: (text: string) => void;
+  onCountChange?: (count: number) => void;
 }) {
   const [items, setItems] = useState<ScratchpadItem[]>([]);
   const [newText, setNewText] = useState("");
+
+  useEffect(() => {
+    onCountChange?.(items.length);
+  }, [items, onCountChange]);
 
   useEffect(() => {
     const storageKey = `user_scratchpad_${reporteeId}`;
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
-        setItems(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setItems(parsed);
       } catch (e) {
         seedDefaults();
       }

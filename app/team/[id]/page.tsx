@@ -4,11 +4,12 @@ import { ProfileLayoutClient } from "@/components/ProfileLayoutClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export default async function ReporteeProfile({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const db = readDb();
-  const mockUser = db.team.find(r => r.id === parseInt(resolvedParams.id));
+  const mockUser = db.team.find(r => String(r.id) === String(resolvedParams.id));
   
   if (!mockUser) {
     return notFound();
@@ -20,6 +21,10 @@ export default async function ReporteeProfile({ params }: { params: Promise<{ id
     const db = b.completedAt ? new Date(b.completedAt).getTime() : 0;
     return db - da; // Descending (most recent first)
   });
+
+  const allMembers = db.team
+    .filter(r => !r.isManager && !r.role?.toLowerCase().includes("manager") && r.id !== 999)
+    .map(r => ({ id: r.id, name: r.name, role: r.role }));
 
   const teamMembersData = db.team.filter(r => r.id !== mockUser.id).map(r => ({
     id: r.id,
@@ -39,6 +44,7 @@ export default async function ReporteeProfile({ params }: { params: Promise<{ id
         completedTasks={completedTasks}
         frequencies={db.config.checkInFrequencies}
         teamContext={teamMembersData}
+        allMembers={allMembers}
       />
     </div>
   );

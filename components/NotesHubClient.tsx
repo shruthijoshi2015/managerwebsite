@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Sparkles, Calendar, MessageSquare, CheckCircle2, Circle, LayoutTemplate, Columns, Search, Filter, Plus, Activity, X } from "lucide-react";
+import { Sparkles, Calendar, MessageSquare, CheckCircle2, Circle, LayoutTemplate, Columns, Search, Filter, Plus, Activity, X, Download, FileText } from "lucide-react";
 import { NotesEditor } from "@/components/NotesEditor";
 
 export function NotesHubClient({ team }: { team: any[] }) {
@@ -122,6 +122,44 @@ export function NotesHubClient({ team }: { team: any[] }) {
               className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] sm:text-[13px] font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-indigo-400 shadow-sm transition-colors"
             />
           </div>
+          <button
+            onClick={() => {
+              const printWindow = window.open('', '_blank');
+              if (!printWindow) return;
+              printWindow.document.write(`
+                <html>
+                <head><title>Check-in Notes Hub Export</title>
+                <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 900px; margin: 0 auto; padding: 40px; }
+                  h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; }
+                  .note-item { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0; }
+                  .note-header { font-weight: bold; font-size: 16px; color: #0f172a; margin-bottom: 6px; }
+                  .note-date { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+                  .note-content { font-size: 14px; color: #334155; }
+                  @media print { body { padding: 0; } }
+                </style>
+                </head>
+                <body>
+                  <h1>Check-in Notes Hub (${filterTeam === 'All' ? 'All Team Members' : filterTeam})</h1>
+                  ${filteredNotes.map((note: any) => `
+                    <div class="note-item">
+                      <div class="note-header">${note.type === '1:1' ? `1:1 with ${note.member.name}` : `${note.type} Notes (${note.member.name})`}</div>
+                      <div class="note-date">${new Date(note.date).toLocaleDateString()} - Role: ${note.member.role || 'Team Member'}</div>
+                      <div class="note-content">${note.content || note.aiSummary?.tldr || ''}</div>
+                    </div>
+                  `).join('')}
+                  <script>window.onload = () => { window.print(); };</script>
+                </body>
+                </html>
+              `);
+              printWindow.document.close();
+            }}
+            title="Export Check-in Notes (.pdf / .doc)"
+            className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-[12px] sm:text-[13px] font-semibold shadow-sm transition-colors shrink-0"
+          >
+            <Download className="w-4 h-4 text-indigo-600" />
+            Export Notes (.doc / .pdf)
+          </button>
           <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-lg text-[12px] sm:text-[13px] font-semibold shadow-sm transition-colors shrink-0">
             <Plus className="w-4 h-4" />
             Add Note
@@ -159,15 +197,49 @@ export function NotesHubClient({ team }: { team: any[] }) {
                     {/* The Card */}
                     <div className={`w-full md:w-[calc(50%-3rem)] ${gradient} rounded-[20px] p-6 shadow-sm border border-white/50 relative overflow-hidden transition-all hover:shadow-md group`}>
                       
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[14px] shadow-sm">
-                          {initials}
+                      <div className="flex items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[14px] shadow-sm shrink-0">
+                            {initials}
+                          </div>
+                          <div>
+                            <h3 className="text-[17px] font-bold text-slate-900 leading-tight">
+                              {note.type === '1:1' ? `1:1 with ${note.member.name.split(' ')[0]}` : `${note.type} Notes`}
+                            </h3>
+                            <p className="text-[13px] text-slate-600 font-medium opacity-80">{note.member.role}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-[17px] font-bold text-slate-900 leading-tight">
-                            {note.type === '1:1' ? `1:1 with ${note.member.name.split(' ')[0]}` : `${note.type} Notes`}
-                          </h3>
-                          <p className="text-[13px] text-slate-600 font-medium opacity-80">{note.member.role}</p>
+                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              const printWindow = window.open('', '_blank');
+                              if (!printWindow) return;
+                              printWindow.document.write(`
+                                <html>
+                                <head><title>${note.type} Note - ${note.member.name}</title>
+                                <style>
+                                  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 40px; }
+                                  h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 16px; }
+                                  .meta { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+                                  .content { font-size: 15px; color: #1e293b; }
+                                  @media print { body { padding: 0; } }
+                                </style>
+                                </head>
+                                <body>
+                                  <h1>${note.type === '1:1' ? `1:1 Check-in Note` : `${note.type} Note`} - ${note.member.name}</h1>
+                                  <div class="meta">Date: ${new Date(note.date).toLocaleDateString()} | Role: ${note.member.role}</div>
+                                  <div class="content">${note.content || note.aiSummary?.tldr || ''}</div>
+                                  <script>window.onload = () => { window.print(); };</script>
+                                </body>
+                                </html>
+                              `);
+                              printWindow.document.close();
+                            }}
+                            title="Export Note to PDF / Word (.doc)"
+                            className="p-1.5 bg-white/80 hover:bg-white rounded-lg text-slate-700 shadow-2xs flex items-center gap-1 text-[11px] font-semibold transition"
+                          >
+                            <Download className="w-3.5 h-3.5 text-indigo-600" /> Export (.doc/.pdf)
+                          </button>
                         </div>
                       </div>
 

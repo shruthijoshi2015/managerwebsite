@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bell, Target, Activity, Sparkles, Smile, ShieldAlert, CheckCircle2, FileText, Database, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bell, Target, Activity, Sparkles, Smile, ShieldAlert, CheckCircle2, FileText, Database, BookOpen, KanbanSquare } from "lucide-react";
 
 type TeamMember = { id: number; name: string; role: string };
 
@@ -40,12 +40,12 @@ export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMember[] }) {
     return parts[0]?.substring(0, 2) || "??";
   };
 
-  const linkClass = "flex items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-md transition-colors";
+  const linkClass = "flex items-center gap-3 px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors w-full";
   const activeClass = "bg-slate-100 text-slate-900";
   const inactiveClass = "text-slate-500 hover:bg-slate-50 hover:text-slate-800";
 
   return (
-    <div className={`${isExpanded ? 'w-36' : 'w-14'} shrink-0 h-screen transition-all duration-300 relative z-50 bg-white border-r border-slate-200 flex flex-col`}>
+    <div className={`${isExpanded ? 'w-48' : 'w-14'} shrink-0 h-screen transition-all duration-300 relative z-50 bg-white border-r border-slate-200 flex flex-col`}>
       <div className="p-4 h-16 flex items-center shrink-0">
         <div className="flex items-center gap-3 px-2">
           <div className="w-6 h-6 rounded bg-slate-900 flex items-center justify-center shrink-0">
@@ -55,44 +55,65 @@ export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMember[] }) {
         </div>
       </div>
       
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-x-hidden overflow-y-auto">
-        <Link href="/" className={`${linkClass} ${pathname === '/' ? activeClass : inactiveClass}`}>
-          <LayoutDashboard className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Dashboard</span>
-        </Link>
-        <Link href="/team" className={`${linkClass} ${pathname === '/team' ? activeClass : inactiveClass}`}>
-          <Users className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>My Team</span>
-        </Link>
-        <Link href="/goals" className={`${linkClass} ${pathname === '/goals' ? activeClass : inactiveClass}`}>
-          <Target className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Goals</span>
-        </Link>
-        <Link href="/notes" className={`${linkClass} ${pathname === '/notes' ? activeClass : inactiveClass}`}>
-          <FileText className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Check-ins</span>
-        </Link>
-        <Link href="/notebook" className={`${linkClass} ${pathname === '/notebook' ? activeClass : inactiveClass}`}>
-          <BookOpen className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Notebook</span>
-        </Link>
-        <Link href="/actions" className={`${linkClass} ${pathname === '/actions' ? activeClass : inactiveClass}`}>
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>All Actions</span>
-        </Link>
-        <Link href="/settings" className={`${linkClass} ${inactiveClass}`}>
-          <Settings className="w-4 h-4 shrink-0" />
-          <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Settings</span>
-        </Link>
+      <nav id="sidebar-nav" aria-label="Main Navigation" className="flex-1 px-3 py-3 space-y-5 overflow-x-hidden overflow-y-auto">
+        {/* WORKSPACE GROUP */}
+        <div className="space-y-0.5" role="group" aria-labelledby="nav-group-workspace">
+          {isExpanded && <div id="nav-group-workspace" className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase select-none">Workspace</div>}
+          <Link href="/" aria-current={pathname === '/' ? 'page' : undefined} className={`${linkClass} ${pathname === '/' ? activeClass : inactiveClass}`}>
+            <LayoutDashboard className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Dashboard</span>
+          </Link>
+          <Link href="/board" aria-current={pathname === '/board' ? 'page' : undefined} className={`${linkClass} ${pathname === '/board' ? activeClass : inactiveClass}`}>
+            <KanbanSquare className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>My board</span>
+          </Link>
+          <Link href="/notebook" aria-current={pathname === '/notebook' ? 'page' : undefined} className={`${linkClass} ${pathname === '/notebook' ? activeClass : inactiveClass}`}>
+            <BookOpen className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Notebook</span>
+          </Link>
+        </div>
+
+        {/* TEAM GROUP */}
+        <div className="space-y-0.5" role="group" aria-labelledby="nav-group-team">
+          {isExpanded && <div id="nav-group-team" className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase select-none">Team</div>}
+          <Link href="/team" aria-current={pathname === '/team' ? 'page' : undefined} className={`${linkClass} ${pathname === '/team' ? activeClass : inactiveClass}`}>
+            <Users className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>My team</span>
+          </Link>
+          <Link href="/goals" aria-current={pathname === '/goals' ? 'page' : undefined} className={`${linkClass} ${pathname === '/goals' ? activeClass : inactiveClass}`}>
+            <Target className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Goals</span>
+          </Link>
+          <Link href="/notes" aria-current={pathname === '/notes' ? 'page' : undefined} className={`${linkClass} ${pathname === '/notes' ? activeClass : inactiveClass}`}>
+            <FileText className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Check-ins</span>
+          </Link>
+          <Link href="/actions" aria-current={pathname === '/actions' ? 'page' : undefined} className={`${linkClass} ${pathname === '/actions' ? activeClass : inactiveClass}`}>
+            <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>All actions</span>
+          </Link>
+        </div>
+
+        {/* MORE GROUP */}
+        <div className="space-y-0.5" role="group" aria-labelledby="nav-group-more">
+          {isExpanded && <div id="nav-group-more" className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase select-none">More</div>}
+          <Link href="/settings" aria-current={pathname === '/settings' ? 'page' : undefined} className={`${linkClass} ${pathname === '/settings' ? activeClass : inactiveClass}`}>
+            <Settings className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className={`transition-opacity duration-300 truncate ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>Settings</span>
+          </Link>
+        </div>
       </nav>
 
       <div className="p-4 border-t border-slate-100 mt-auto shrink-0 relative">
          <button 
            onClick={toggleSidebar} 
-           className="absolute -right-3 top-[-14px] bg-white border border-slate-200 shadow-sm rounded-full p-1 text-slate-400 hover:text-slate-600 transition-all z-50"
+           aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+           aria-expanded={isExpanded}
+           aria-controls="sidebar-nav"
+           className="absolute -right-3 top-[-14px] bg-white border border-slate-200 shadow-sm rounded-full p-1 text-slate-400 hover:text-slate-600 transition-all z-50 focus-visible:outline-2 focus-visible:outline-indigo-500"
            title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
          >
-           {isExpanded ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+           {isExpanded ? <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />}
          </button>
 
         <div className={`flex items-center justify-center px-2 py-1`}>

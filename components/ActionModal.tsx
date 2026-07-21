@@ -26,7 +26,20 @@ export function ActionModal({
   const [title, setTitle] = useState(editTask?.title || initialTitle || "");
   const [status, setStatus] = useState<'pending'|'in_progress'|'resolved'>(editTask?.status || "pending");
   const [priority, setPriority] = useState<'P0'|'P1'|'P2'>(editTask?.priority || "P2");
-  const [timeframe, setTimeframe] = useState(editTask?.timeframe || "");
+  const todayISO = new Date().toISOString().split('T')[0];
+  const isISODate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+  const parseLegacyTimeframe = (tf: string): string => {
+    if (!tf) return '';
+    if (isISODate(tf)) return tf;
+    const parsed = Date.parse(tf);
+    if (!isNaN(parsed)) return new Date(parsed).toISOString().split('T')[0];
+    return '';
+  };
+  const legacyHint = editTask?.timeframe && !isISODate(editTask.timeframe) && isNaN(Date.parse(editTask.timeframe)) ? editTask.timeframe : '';
+  const [timeframe, setTimeframe] = useState(() => {
+    if (editTask?.timeframe) return parseLegacyTimeframe(editTask.timeframe);
+    return todayISO;
+  });
   const [owner, setOwner] = useState<'manager'|'reportee'>(editTask?.owner || "reportee");
   const [selectedUserId, setSelectedUserId] = useState<string>(reporteeId?.toString() || "");
   const [isSaving, setIsSaving] = useState(false);
@@ -147,12 +160,40 @@ export function ActionModal({
             <div>
               <label className="block text-[12px] font-bold text-slate-700 mb-2">Due Date / Timeframe</label>
               <input 
-                type="text" 
+                type="date" 
                 value={timeframe}
                 onChange={e => setTimeframe(e.target.value)}
-                placeholder="e.g., Oct 28"
                 className="w-full px-3 py-2 text-[13px] bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 shadow-sm"
               />
+              {legacyHint && (
+                <p className="text-[11px] text-slate-400 mt-1">Original: {legacyHint}</p>
+              )}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {[
+                  { label: 'Today', offset: 0 },
+                  { label: 'Tomorrow', offset: 1 },
+                  { label: 'Next Week', offset: 7 },
+                  { label: 'Next Month', offset: 30 },
+                ].map(chip => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + chip.offset);
+                  const val = d.toISOString().split('T')[0];
+                  return (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => setTimeframe(val)}
+                      className={`px-2.5 py-1 text-[11px] font-medium rounded-full border cursor-pointer transition ${
+                        timeframe === val
+                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                          : 'bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <label className="block text-[12px] font-bold text-slate-700 mb-2">Assignee</label>

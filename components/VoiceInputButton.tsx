@@ -90,11 +90,11 @@ export function VoiceInputButton({ onResult, className = "", title = "Voice inpu
         type="button"
         onClick={toggleListening}
         title={isListening ? "Listening... Click to stop" : title}
-        className={`p-1.5 rounded-full transition-all flex items-center justify-center ${
+        className={`transition-all flex items-center justify-center ${
           isListening
-            ? "bg-red-500 text-white animate-pulse shadow-sm shadow-red-300 ring-2 ring-red-200"
-            : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-        } ${className}`}
+            ? "w-8 h-8 rounded-full bg-red-500 text-white animate-pulse shadow-sm shadow-red-300 ring-2 ring-red-200"
+            : (className || "p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100")
+        }`}
       >
         {isListening ? <Activity className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
       </button>

@@ -8,6 +8,10 @@ import { WeeklyReviewPanel } from "./WeeklyReviewPanel";
 import { SentimentTrendPanel } from "./SentimentTrendPanel";
 import { SkillMatrixPanel } from "./SkillMatrixPanel";
 import { RiskRadarPanel } from "./RiskRadarPanel";
+import { GoalModal } from "./ProfileLayoutClient";
+import { ActionModal } from "./ActionModal";
+import { NotificationBell } from "./NotificationBell";
+import { CalendarSyncModal } from "./CalendarSyncModal";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,7 +20,8 @@ import {
   Smile, Building2, Activity, GripVertical, Plus, X, RotateCcw,
   Star, Flame, Timer, CheckCircle2, Calendar, Hourglass,
   PartyPopper, Shuffle, AlertCircle, Check, LayoutGrid,
-  ArrowUpRight, Sparkles, Brain, ShieldAlert, ChevronDown
+  ArrowUpRight, Sparkles, Brain, ShieldAlert, ChevronDown,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -76,7 +81,7 @@ function Av({ initials, color, textColor, size = "md" }: { initials: string; col
   );
 }
 
-function Hdr({ icon, label, count, actionUrl, actionLabel }: { icon: React.ReactNode; label: string; count?: number; actionUrl?: string; actionLabel?: string }) {
+function Hdr({ icon, label, count, actionUrl, actionLabel, onAdd, addLabel }: { icon: React.ReactNode; label: string; count?: number; actionUrl?: string; actionLabel?: string; onAdd?: () => void; addLabel?: string }) {
   return (
     <div className="flex items-center mb-4">
       <div className="flex items-center gap-2 flex-1">
@@ -84,11 +89,19 @@ function Hdr({ icon, label, count, actionUrl, actionLabel }: { icon: React.React
         <span className="text-[11px] font-semibold text-slate-500 tracking-[0.08em] uppercase">{label}</span>
         {count !== undefined && <span className="text-[11px] font-medium text-slate-500 bg-slate-100 rounded-full px-1.5 py-0.5 leading-none">{count}</span>}
       </div>
-      {actionUrl && actionLabel && (
-        <Link href={actionUrl} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700">
-          {actionLabel}
-        </Link>
-      )}
+      <div className="flex items-center gap-3">
+        {onAdd && (
+          <button onClick={onAdd} className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50/80 px-2.5 py-1 rounded-full transition-colors shadow-2xs">
+            <Plus className="w-3 h-3" />
+            {addLabel || "Add"}
+          </button>
+        )}
+        {actionUrl && actionLabel && (
+          <Link href={actionUrl} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700">
+            {actionLabel}
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
@@ -173,33 +186,33 @@ function MeFocusBanner() {
 }
 
 function GoalProgressStat({ manager }: { manager?: Reportee }) {
-  const goals = manager?.goals?.length ? manager.goals : ME_GOALS;
+  const goals = manager ? (manager.goals || []) : ME_GOALS;
   const avg = goals.length ? Math.round(goals.reduce((a, g) => a + g.progress, 0) / goals.length) : 0;
   const url = manager ? `/goals?user=${encodeURIComponent(manager.name)}` : "/goals";
   return <StatTile label="Goal progress" val={<>{avg}<span className="text-[18px]">%</span></>} subEl={<Link href={url} className="flex items-center gap-1 text-[12px] text-emerald-600 hover:underline"><TrendingUp className="w-3.5 h-3.5" />View manager goals →</Link>} />;
 }
 
 function TasksDoneStat({ manager }: { manager?: Reportee }) {
-  const tasks = manager?.tasks?.length ? manager.tasks : ME_TASKS;
+  const tasks = manager ? (manager.tasks || []) : ME_TASKS;
   const done = tasks.filter(t => t.done).length;
   const url = manager ? `/actions?user=${encodeURIComponent(manager.name)}` : "/actions";
   return <StatTile label="Tasks done" val={<>{done}<span className="text-[18px] font-normal text-slate-400">/{tasks.length}</span></>} subEl={<Link href={url} className="flex items-center gap-1 text-[12px] text-slate-500 hover:underline"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />View manager tasks →</Link>} />;
 }
 
 function GoalsAtRiskStat({ manager }: { manager?: Reportee }) {
-  const goals = manager?.goals?.length ? manager.goals : ME_GOALS;
+  const goals = manager ? (manager.goals || []) : ME_GOALS;
   const n = goals.filter((g: any) => g.status === 'at_risk' || g.status === 'off_track' || g.progress < 60).length;
   const url = manager ? `/goals?user=${encodeURIComponent(manager.name)}` : "/goals";
   return <StatTile amber label="Goals at risk" val={n} subEl={<div><div className="flex items-center gap-1 text-[12px] text-amber-600 mb-0.5"><AlertTriangle className="w-3 h-3" />Needs attention</div><Link href={url} className="text-[12px] text-slate-400 hover:text-slate-700 inline-block font-medium">Review manager goals →</Link></div>} />;
 }
 
-function MyActiveGoals({ manager }: { manager?: Reportee }) {
-  const goals = manager?.goals?.length ? manager.goals : ME_GOALS;
+function MyActiveGoals({ manager, onNewGoal }: { manager?: Reportee; onNewGoal?: () => void }) {
+  const goals = manager ? (manager.goals || []) : ME_GOALS;
   const url = manager ? `/goals?user=${encodeURIComponent(manager.name)}` : "/goals";
-  if (!goals.length) return <><Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={0} actionUrl={url} actionLabel="View all" /><Empty emoji="🎯" title="No goals yet" sub="Set your first goal to start tracking what matters to you." cta={{ label: "+ Create a goal", onClick: () => {} }} /></>;
+  if (!goals.length) return <><Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={0} actionUrl={url} actionLabel="View all" /><Empty emoji="🎯" title="No goals yet" sub="Set your first goal to start tracking what matters to you." cta={{ label: "+ Create a goal", onClick: () => onNewGoal?.() }} /></>;
   return (
     <>
-      <Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={goals.length} actionUrl={url} actionLabel="View all" />
+      <Hdr icon={<Target className="w-4 h-4" />} label="MY ACTIVE GOALS" count={goals.length} actionUrl={url} actionLabel="View all" onAdd={onNewGoal} addLabel="New goal" />
       <div className="space-y-3">
         {goals.slice(0, 6).map((g, idx) => {
           const colors = ["#6366f1", "#10b981", "#3b82f6", "#f59e0b", "#ec4899"];
@@ -222,13 +235,13 @@ function MyActiveGoals({ manager }: { manager?: Reportee }) {
   );
 }
 
-function MyTasks({ manager }: { manager?: Reportee }) {
-  const tasks = manager?.tasks?.length ? manager.tasks : ME_TASKS;
+function MyTasks({ manager, onNewTask }: { manager?: Reportee; onNewTask?: () => void }) {
+  const tasks = manager ? (manager.tasks || []) : ME_TASKS;
   const url = manager ? `/actions?user=${encodeURIComponent(manager.name)}` : "/actions";
-  if (!tasks.length) return <><Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={0} actionUrl={url} actionLabel="View all" /><Empty emoji="✅" title="No tasks right now" sub="You're caught up. Add a task when something new comes up." cta={{ label: "+ Add task", onClick: () => {} }} /></>;
+  if (!tasks.length) return <><Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={0} actionUrl={url} actionLabel="View all" /><Empty emoji="✅" title="No tasks right now" sub="You're caught up. Add a task when something new comes up." cta={{ label: "+ Add task", onClick: () => onNewTask?.() }} /></>;
   return (
     <>
-      <Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={tasks.length} actionUrl={url} actionLabel="View all" />
+      <Hdr icon={<CheckSquare className="w-4 h-4" />} label="MY TASKS" count={tasks.length} actionUrl={url} actionLabel="View all" onAdd={onNewTask} addLabel="New task" />
       <div className="space-y-2.5">
         {tasks.map(t => (
           <div key={t.id} className="flex items-center gap-3">
@@ -354,10 +367,10 @@ function Upcoming1on1s({ onPrep }: { onPrep?: (name: string) => void }) {
   );
 }
 
-function QuickActions() {
+function QuickActions({ onNewGoal, onNewTask }: { onNewGoal?: () => void; onNewTask?: () => void }) {
   const actions = [
-    { icon: <Target className="w-5 h-5" />, label: "New goal", sub: "Set a new objective", color: "text-indigo-500", bg: "bg-indigo-50", url: "/goals?new=true" },
-    { icon: <CheckSquare className="w-5 h-5" />, label: "New task", sub: "Add an action item", color: "text-emerald-500", bg: "bg-emerald-50", url: "/actions?new=true" },
+    { icon: <Target className="w-5 h-5" />, label: "New goal", sub: "Set a new objective", color: "text-indigo-500", bg: "bg-indigo-50", onClick: onNewGoal },
+    { icon: <CheckSquare className="w-5 h-5" />, label: "New task", sub: "Add an action item", color: "text-emerald-500", bg: "bg-emerald-50", onClick: onNewTask },
     { icon: <CalendarDays className="w-5 h-5" />, label: "Schedule 1:1", sub: "Pick a time slot", color: "text-blue-500", bg: "bg-blue-50", url: "/team" },
     { icon: <MessageSquare className="w-5 h-5" />, label: "Check-in", sub: "Daily reflection", color: "text-violet-500", bg: "bg-violet-50", url: "/notes" },
   ];
@@ -365,13 +378,24 @@ function QuickActions() {
     <>
       <Hdr icon={<Zap className="w-4 h-4" />} label="QUICK ACTIONS" />
       <div className="grid grid-cols-2 gap-2">
-        {actions.map((a, i) => (
-          <Link href={a.url} key={i} className="flex flex-col gap-1.5 p-3 rounded-lg border border-slate-100 text-left hover:border-slate-200 hover:bg-slate-50 transition-colors">
-            <div className={`${a.bg} ${a.color} p-1.5 rounded-md w-fit`}>{a.icon}</div>
-            <div className="text-[12px] font-semibold text-slate-800">{a.label}</div>
-            <div className="text-[11px] text-slate-400">{a.sub}</div>
-          </Link>
-        ))}
+        {actions.map((a, i) => {
+          if (a.onClick) {
+            return (
+              <button key={i} onClick={a.onClick} className="flex flex-col gap-1.5 p-3 rounded-lg border border-slate-100 text-left hover:border-slate-200 hover:bg-slate-50 transition-colors">
+                <div className={`${a.bg} ${a.color} p-1.5 rounded-md w-fit`}>{a.icon}</div>
+                <div className="text-[12px] font-semibold text-slate-800">{a.label}</div>
+                <div className="text-[11px] text-slate-400">{a.sub}</div>
+              </button>
+            );
+          }
+          return (
+            <Link href={a.url!} key={i} className="flex flex-col gap-1.5 p-3 rounded-lg border border-slate-100 text-left hover:border-slate-200 hover:bg-slate-50 transition-colors">
+              <div className={`${a.bg} ${a.color} p-1.5 rounded-md w-fit`}>{a.icon}</div>
+              <div className="text-[12px] font-semibold text-slate-800">{a.label}</div>
+              <div className="text-[11px] text-slate-400">{a.sub}</div>
+            </Link>
+          );
+        })}
       </div>
     </>
   );
@@ -811,9 +835,228 @@ function OneOnOneCadence({ team }: { team: Reportee[] }) {
   return <StatTile label="1:1 cadence" val={<>{pct}<span className="text-[18px]">%</span></>} subEl={<div className="text-[12px] text-slate-400">have check-in cadence set</div>} />;
 }
 
+// ─── PRIORITY CARDS CAROUSEL ──────────────────────────────────────────────────
+
+function PriorityCardsCarousel({ team, onSummarise, onPrep }: { team: Reportee[]; onSummarise: () => void; onPrep: (name: string) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [localDismissed, setLocalDismissed] = useState<Set<string>>(new Set());
+  const router = useRouter();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayMs = new Date(todayStr).getTime();
+
+  // Collect overdue tasks
+  const overdueTasks = useMemo(() => {
+    const items: { id: string; task: string; timeframe: string; priority: string; memberName: string; memberId: number; daysOverdue: number }[] = [];
+    team.forEach(member => {
+      (member.tasks || []).forEach(task => {
+        if (task.status === 'resolved' || task.done) return;
+        const tf = task.timeframe;
+        if (!tf || tf === 'No Due Date') return;
+        const isISO = /^\d{4}-\d{2}-\d{2}$/.test(tf);
+        const parsed = isISO ? new Date(tf).getTime() : Date.parse(tf);
+        if (isNaN(parsed)) return;
+        if (parsed < todayMs) {
+          const daysOverdue = Math.ceil((todayMs - parsed) / 86400000);
+          items.push({
+            id: `manual-${task.id}`,
+            task: task.title,
+            timeframe: tf,
+            priority: task.priority || 'P2',
+            memberName: member.name,
+            memberId: member.id,
+            daysOverdue,
+          });
+        }
+      });
+    });
+    return items;
+  }, [team, todayMs]);
+
+  // Collect goals at risk (progress < 50%)
+  const goalsAtRisk = useMemo(() => {
+    const items: { id: number; title: string; ownerName: string; ownerId: number; progress: number; dueDate?: string }[] = [];
+    team.forEach(member => {
+      (member.goals || []).forEach(goal => {
+        if (goal.progress < 50) {
+          items.push({
+            id: goal.id,
+            title: goal.title,
+            ownerName: member.name,
+            ownerId: member.id,
+            progress: goal.progress,
+            dueDate: goal.dueDate,
+          });
+        }
+      });
+    });
+    return items;
+  }, [team]);
+
+  // Today's 1:1s (use MEETINGS_1ON1 or derive from team)
+  const todays1on1s = useMemo(() => {
+    // Since MEETINGS_1ON1 is static, derive from team for real data
+    return team.slice(0, 3).map((m, i) => ({
+      name: m.name,
+      memberId: m.id,
+      time: `${9 + i}:00 AM`,
+      prepped: false,
+    }));
+  }, [team]);
+
+  const totalItems = overdueTasks.filter(t => !localDismissed.has(t.id)).length + todays1on1s.length + goalsAtRisk.filter(g => !localDismissed.has(`goal-${g.id}`)).length;
+
+  const scroll = (dir: 'left' | 'right') => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
+    }
+  };
+
+  const handleSnooze = async (taskId: string, memberId: number) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowISO = tomorrow.toISOString().split('T')[0];
+    setLocalDismissed(prev => new Set(prev).add(taskId));
+    try {
+      await fetch('/api/update-action-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: taskId, reporteeId: memberId, timeframe: tomorrowISO }),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error('Snooze failed:', err);
+    }
+  };
+
+  const handleMarkDone = async (taskId: string, memberId: number) => {
+    setLocalDismissed(prev => new Set(prev).add(taskId));
+    try {
+      await fetch('/api/update-action-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: taskId, reporteeId: memberId, status: 'resolved' }),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error('Mark done failed:', err);
+    }
+  };
+
+  if (totalItems === 0) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400"><AlertTriangle className="w-4 h-4" /></span>
+            <span className="text-[11px] font-semibold text-slate-500 tracking-[0.08em] uppercase">Priority Cards</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+          </div>
+          <div className="text-[14px] font-semibold text-slate-700 mb-1">All clear!</div>
+          <div className="text-[12px] text-slate-400">No urgent items today.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-slate-400"><AlertTriangle className="w-4 h-4" /></span>
+          <span className="text-[11px] font-semibold text-slate-500 tracking-[0.08em] uppercase">Today&apos;s Priorities</span>
+          <span className="text-[11px] font-medium text-slate-500 bg-slate-100 rounded-full px-1.5 py-0.5 leading-none">{totalItems}</span>
+          <span className="text-[11px] text-slate-400 ml-1">items need attention</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => scroll('left')} className="w-7 h-7 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors shadow-sm">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button onClick={() => scroll('right')} className="w-7 h-7 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors shadow-sm">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button onClick={onSummarise} className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-lg px-3.5 py-1.5 text-[12px] font-bold transition-all shadow-md shadow-indigo-500/20">
+            <Sparkles className="w-3.5 h-3.5 text-pink-200 animate-pulse" />
+            Summarise
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable row */}
+      <div ref={scrollRef} className="flex gap-3 overflow-x-auto scroll-smooth snap-x pb-2 scrollbar-none">
+        {/* Overdue task cards */}
+        {overdueTasks.filter(t => !localDismissed.has(t.id)).map(task => (
+          <div key={task.id} className="min-w-[280px] max-w-[300px] rounded-xl p-4 shrink-0 snap-start bg-slate-50/80 border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Overdue Task</span>
+            </div>
+            <h4 className="text-[13px] font-bold text-slate-800 mb-1.5 line-clamp-2 leading-snug">{task.task}</h4>
+            <p className="text-[11px] text-slate-500 mb-1">Assigned to: {task.memberName}</p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${task.priority === 'P0' ? 'bg-rose-100 text-rose-700' : task.priority === 'P1' ? 'bg-orange-100 text-orange-700' : 'bg-slate-200/70 text-slate-700'}`}>{task.priority}</span>
+              <span className="text-[11px] font-semibold text-red-600">{task.daysOverdue} day{task.daysOverdue !== 1 ? 's' : ''} overdue</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/actions" className="flex-1 text-center py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-semibold rounded-lg transition-colors shadow-2xs">Open →</Link>
+              <button onClick={() => handleSnooze(task.id, task.memberId)} className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg hover:bg-slate-100 transition-colors shadow-2xs">Snooze 1d</button>
+              <button onClick={() => handleMarkDone(task.id, task.memberId)} className="flex-1 py-1.5 bg-white border border-slate-200 text-emerald-700 text-[11px] font-semibold rounded-lg hover:bg-slate-100 transition-colors shadow-2xs">Done ✓</button>
+            </div>
+          </div>
+        ))}
+
+        {/* Today's 1:1 cards */}
+        {todays1on1s.map((meeting, idx) => (
+          <div key={`1on1-${idx}`} className="min-w-[280px] max-w-[300px] rounded-xl p-4 shrink-0 snap-start bg-slate-50/80 border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">1:1 Today</span>
+            </div>
+            <h4 className="text-[13px] font-bold text-slate-800 mb-1.5">{meeting.name}</h4>
+            <p className="text-[11px] text-slate-500 mb-1">{meeting.time}</p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${meeting.prepped ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200/70 text-slate-600'}`}>{meeting.prepped ? 'Prepped' : 'Not prepped'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => onPrep(meeting.name)} className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-semibold rounded-lg transition-colors shadow-2xs">Prep →</button>
+              <button className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg hover:bg-slate-100 transition-colors shadow-2xs">Skip</button>
+            </div>
+          </div>
+        ))}
+
+        {/* Goals at risk cards */}
+        {goalsAtRisk.filter(g => !localDismissed.has(`goal-${g.id}`)).map(goal => (
+          <div key={`goal-${goal.id}`} className="min-w-[280px] max-w-[300px] rounded-xl p-4 shrink-0 snap-start bg-slate-50/80 border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Goal at Risk</span>
+            </div>
+            <h4 className="text-[13px] font-bold text-slate-800 mb-1.5 line-clamp-2 leading-snug">{goal.title}</h4>
+            <p className="text-[11px] text-slate-500 mb-1">Owner: {goal.ownerName}</p>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] font-semibold text-slate-700">{goal.progress}% complete</span>
+              {goal.dueDate && <span className="text-[11px] text-slate-400">Due {new Date(goal.dueDate).toLocaleDateString()}</span>}
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mb-3">
+              <div className="h-full rounded-full bg-slate-700" style={{ width: `${goal.progress}%` }} />
+            </div>
+            <Link href={`/goals?user=${encodeURIComponent(goal.ownerName)}`} className="block text-center py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-semibold rounded-lg transition-colors shadow-2xs">Review goal →</Link>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── WIDGET DEFINITIONS ───────────────────────────────────────────────────────
 const ME_DEFS: WidgetDef[] = [
   { id: "focus-banner", label: "Focus banner", description: "What needs your attention today", icon: <Star className="w-5 h-5" />, iconBg: "bg-indigo-50", iconColor: "text-indigo-500", category: "productivity", defaultSize: "lg" },
+  { id: "priority-cards", label: "Priority Cards", description: "Carousel of urgent items needing action", icon: <AlertTriangle className="w-5 h-5" />, iconBg: "bg-red-50", iconColor: "text-red-500", category: "productivity", defaultSize: "lg" },
   { id: "goal-progress", label: "Goal progress", description: "Your overall goal completion", icon: <Target className="w-5 h-5" />, iconBg: "bg-emerald-50", iconColor: "text-emerald-500", category: "productivity", defaultSize: "sm" },
   { id: "tasks-done", label: "Tasks done", description: "Completed tasks vs total", icon: <CheckSquare className="w-5 h-5" />, iconBg: "bg-blue-50", iconColor: "text-blue-500", category: "productivity", defaultSize: "sm" },
   { id: "goals-at-risk", label: "Goals at risk", description: "Goals needing attention", icon: <AlertTriangle className="w-5 h-5" />, iconBg: "bg-amber-50", iconColor: "text-amber-500", category: "productivity", defaultSize: "sm" },
@@ -856,8 +1099,9 @@ const TEAM_DEFS: WidgetDef[] = [
 // ─── DEFAULT LAYOUTS ──────────────────────────────────────────────────────────
 const ME_DEFAULT: WidgetInstance[] = [
   mkW("focus-banner", "lg"),
-  mkW("goal-progress", "sm"), mkW("tasks-done", "sm"), mkW("goals-at-risk", "sm"),
+  mkW("priority-cards", "lg"),
   mkW("my-active-goals", "md"), mkW("my-tasks", "md"),
+  mkW("goal-progress", "sm"), mkW("tasks-done", "sm"), mkW("goals-at-risk", "sm"),
   mkW("upcoming-1on1s", "md"), mkW("quick-actions", "md"),
 ];
 
@@ -1000,11 +1244,14 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
 
   // 1:1 Prep Assistant state
   const [prepTarget, setPrepTarget] = useState<{ id: number; name: string } | null>(null);
+  const [showCreateGoalModal, setShowCreateGoalModal] = useState(false);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showWeeklyReview, setShowWeeklyReview] = useState(false);
   const [showSentiment, setShowSentiment] = useState(false);
   const [showSkillMatrix, setShowSkillMatrix] = useState(false);
   const [showRiskRadar, setShowRiskRadar] = useState(false);
   const [isAiDropdownOpen, setIsAiDropdownOpen] = useState(false);
+  const [showCalendarSync, setShowCalendarSync] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1042,13 +1289,14 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
   function renderContent(inst: WidgetInstance): React.ReactNode {
     switch (inst.widgetId) {
       case "focus-banner": return <MeFocusBanner />;
+      case "priority-cards": return <PriorityCardsCarousel team={team} onSummarise={() => setShowWeeklyReview(true)} onPrep={handlePrepClick} />;
       case "goal-progress": return <GoalProgressStat manager={managerUser} />;
       case "tasks-done": return <TasksDoneStat manager={managerUser} />;
       case "goals-at-risk": return <GoalsAtRiskStat manager={managerUser} />;
-      case "my-active-goals": return <MyActiveGoals manager={managerUser} />;
-      case "my-tasks": return <MyTasks manager={managerUser} />;
+      case "my-active-goals": return <MyActiveGoals manager={managerUser} onNewGoal={() => setShowCreateGoalModal(true)} />;
+      case "my-tasks": return <MyTasks manager={managerUser} onNewTask={() => setShowCreateTaskModal(true)} />;
       case "upcoming-1on1s": return <Upcoming1on1s onPrep={handlePrepClick} />;
-      case "quick-actions": return <QuickActions />;
+      case "quick-actions": return <QuickActions onNewGoal={() => setShowCreateGoalModal(true)} onNewTask={() => setShowCreateTaskModal(true)} />;
       case "monthly-calendar": return <MonthlyCalendar />;
       case "time-allocation": return <TimeAllocation />;
       case "quarterly-okr": return <QuarterlyOKR />;
@@ -1111,54 +1359,68 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
 
         <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm shrink-0">
-              <button onClick={() => setTab("me")} className={`px-4 py-1.5 text-[13px] font-semibold rounded transition-colors ${tab === "me" ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600"}`}>Me</button>
-              <button onClick={() => setTab("team")} className={`px-4 py-1.5 text-[13px] font-semibold rounded transition-colors ${tab === "team" ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600"}`}>Team</button>
+            <div role="tablist" aria-label="Dashboard view mode" className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm shrink-0">
+              <button role="tab" aria-selected={tab === "me"} aria-controls="dashboard-tabpanel" onClick={() => setTab("me")} className={`px-4 py-1.5 text-[13px] font-semibold rounded transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500 ${tab === "me" ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600"}`}>Me</button>
+              <button role="tab" aria-selected={tab === "team"} aria-controls="dashboard-tabpanel" onClick={() => setTab("team")} className={`px-4 py-1.5 text-[13px] font-semibold rounded transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500 ${tab === "team" ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600"}`}>Team</button>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowCalendarSync(true)}
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm focus-visible:outline-2 focus-visible:outline-indigo-500"
+                title="Connect Calendar & Auto-Detect Check-ins"
+              >
+                📆 <span className="hidden sm:inline">Calendar Sync & 1:1s</span>
+              </button>
+              <NotificationBell db={{ config: { checkInFrequencies: [], templates: [], cardConfig: { showProgressTrend: true, showWorkload: true, showQuickStats: true, showMeetingDates: true, showGoalProgress: true, showDepartment: true, fieldOrder: [] } }, team }} />
               <div className="relative">
                 <button 
                   onClick={() => setIsAiDropdownOpen(!isAiDropdownOpen)}
-                  className="px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-[13px] font-semibold rounded-lg transition flex items-center gap-2 shadow-sm"
+                  aria-haspopup="true"
+                  aria-expanded={isAiDropdownOpen}
+                  aria-label="AI Insights menu"
+                  className="px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-[13px] font-semibold rounded-lg transition flex items-center gap-2 shadow-sm focus-visible:outline-2 focus-visible:outline-white"
                 >
-                  <Sparkles className="w-4 h-4 text-indigo-100" />
+                  <Sparkles className="w-4 h-4 text-indigo-100" aria-hidden="true" />
                   AI Insights
-                  <ChevronDown className="w-4 h-4 opacity-70 ml-1" />
+                  <ChevronDown className="w-4 h-4 opacity-70 ml-1" aria-hidden="true" />
                 </button>
                 
                 {isAiDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsAiDropdownOpen(false)}></div>
-                    <div className="absolute top-full mt-2 right-0 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
+                    <div role="menu" aria-label="AI Insights options" className="absolute top-full mt-2 right-0 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
                       <button 
+                        role="menuitem"
                         onClick={() => { setShowWeeklyReview(true); setIsAiDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500"
                       >
                         <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center shrink-0">
-                          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-600" aria-hidden="true" />
                         </div>
                         <div>
                           <div className="text-[13px] font-semibold text-slate-800">Weekly AI Review</div>
                         </div>
                       </button>
                       <button 
+                        role="menuitem"
                         onClick={() => { setShowSentiment(true); setIsAiDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500"
                       >
                         <div className="w-7 h-7 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
-                          <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                          <TrendingUp className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
                         </div>
                         <div>
                           <div className="text-[13px] font-semibold text-slate-800">Sentiment Trend</div>
                         </div>
                       </button>
                       <button 
+                        role="menuitem"
                         onClick={() => { setShowSkillMatrix(true); setIsAiDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500"
                       >
                         <div className="w-7 h-7 rounded-md bg-violet-50 flex items-center justify-center shrink-0">
-                          <Users className="w-3.5 h-3.5 text-violet-600" />
+                          <Users className="w-3.5 h-3.5 text-violet-600" aria-hidden="true" />
                         </div>
                         <div>
                           <div className="text-[13px] font-semibold text-slate-800">Skill Matrix</div>
@@ -1278,6 +1540,30 @@ export function DashboardClient({ team }: { team: Reportee[] }) {
 
       {showRiskRadar && (
         <RiskRadarPanel onClose={() => setShowRiskRadar(false)} />
+      )}
+
+      {showCreateGoalModal && managerUser && (
+        <GoalModal
+          reporteeId={managerUser.id}
+          allGoals={managerUser.goals || []}
+          onClose={() => setShowCreateGoalModal(false)}
+          teamMembers={team.map(m => ({ id: m.id, name: m.name }))}
+        />
+      )}
+
+      {showCreateTaskModal && managerUser && (
+        <ActionModal
+          reporteeId={managerUser.id}
+          team={team}
+          onClose={() => setShowCreateTaskModal(false)}
+        />
+      )}
+
+      {showCalendarSync && (
+        <CalendarSyncModal
+          onClose={() => setShowCalendarSync(false)}
+          teamMembers={team}
+        />
       )}
     </div>
   );

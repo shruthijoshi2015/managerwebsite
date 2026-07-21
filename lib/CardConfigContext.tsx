@@ -57,8 +57,8 @@ type CardConfigContextType = {
   setCardConfig: (config: CardConfig) => void;
   goalModalConfig: GoalModalConfig;
   setGoalModalConfig: (config: GoalModalConfig) => void;
-  activeSettingsTab: 'cardDisplay' | 'frequencies' | 'templates' | 'goals';
-  setActiveSettingsTab: (tab: 'cardDisplay' | 'frequencies' | 'templates' | 'goals') => void;
+  activeSettingsTab: 'cardDisplay' | 'frequencies' | 'templates' | 'goals' | 'checkinOnboarding' | 'storage' | string;
+  setActiveSettingsTab: (tab: 'cardDisplay' | 'frequencies' | 'templates' | 'goals' | 'checkinOnboarding' | 'storage' | string) => void;
 };
 
 const CardConfigContext = createContext<CardConfigContextType>({
@@ -99,7 +99,7 @@ export function CardConfigProvider({
     return initialGoalModalConfig ?? defaultGoalModalConfig;
   });
 
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'cardDisplay' | 'frequencies' | 'templates' | 'goals'>('cardDisplay');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<string>('cardDisplay');
 
   const setCardConfig = (cfg: CardConfig) => {
     setCardConfigState(cfg);

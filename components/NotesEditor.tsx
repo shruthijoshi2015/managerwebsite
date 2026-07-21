@@ -1,10 +1,154 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Save, FileText, Sparkles, Loader2, MessageSquare, Clock, CheckCircle2, Trash2, Brain, Tag, Target, CalendarClock, AlertCircle, Bold, Italic, List, CheckSquare, Heading, Eye, Edit3, Columns, ListOrdered, Calendar, Minus, Underline, Strikethrough, Link as LinkIcon, ChevronDown, Keyboard, X } from "lucide-react";
+import { Save, FileText, Sparkles, Loader2, MessageSquare, Clock, CheckCircle2, Trash2, Brain, Tag, Target, CalendarClock, AlertCircle, Bold, Italic, List, CheckSquare, Heading, Eye, Edit3, Columns, ListOrdered, Calendar, Minus, Underline, Strikethrough, Link as LinkIcon, ChevronDown, Keyboard, X, Download } from "lucide-react";
 import { saveNotes, addTask, updateGoalProgress } from "@/lib/actions";
 import { VoiceInputButton } from "@/components/VoiceInputButton";
 import { getStorageConfig } from "@/lib/storageProvider";
+
+export const exportNoteToDoc = (note: any, reporteeName: string, summary?: any) => {
+  const dateStr = new Date(note.date).toLocaleDateString();
+  const htmlContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8"><title>${note.type} - ${reporteeName}</title>
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 20px; }
+      h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+      .meta { color: #64748b; font-size: 14px; margin-bottom: 20px; }
+      .summary { background-color: #f8fafc; border-left: 4px solid #6366f1; padding: 15px; margin-bottom: 20px; }
+      .content { margin-top: 20px; }
+    </style>
+    </head>
+    <body>
+      <h1>${note.type}</h1>
+      <div class="meta"><strong>Team Member:</strong> ${reporteeName} | <strong>Date:</strong> ${dateStr}</div>
+      ${summary ? `<div class="summary"><strong>AI Summary (TL;DR):</strong><p>${summary.tldr || ''}</p></div>` : ''}
+      <div class="content">${formatToHtml(note.content)}</div>
+    </body>
+    </html>
+  `;
+  const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${reporteeName.replace(/\s+/g, '_')}_${note.type.replace(/\s+/g, '_')}_${dateStr.replace(/\//g, '-')}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+export const exportNoteToPdf = (note: any, reporteeName: string, summary?: any) => {
+  const dateStr = new Date(note.date).toLocaleDateString();
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head><title>${note.type} - ${reporteeName}</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 40px; }
+      h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 5px; }
+      .meta { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+      .summary { background-color: #e0e7ff; border-left: 4px solid #6366f1; padding: 15px; margin-bottom: 25px; border-radius: 4px; }
+      .content { margin-top: 20px; font-size: 15px; }
+      @media print { body { padding: 0; } }
+    </style>
+    </head>
+    <body>
+      <h1>${note.type}</h1>
+      <div class="meta"><strong>Team Member:</strong> ${reporteeName} &nbsp;|&nbsp; <strong>Date:</strong> ${dateStr}</div>
+      ${summary ? `<div class="summary"><strong>AI Summary:</strong><p style="margin:8px 0 0 0;">${summary.tldr || ''}</p></div>` : ''}
+      <div class="content">${formatToHtml(note.content)}</div>
+      <script>window.onload = () => { window.print(); };</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
+
+export const exportHistoryToDoc = (notes: any[], reporteeName: string, noteSummaries: Record<number, any>) => {
+  const htmlContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8"><title>Check-in History - ${reporteeName}</title>
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 20px; }
+      h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+      .note-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+      h2 { color: #1e293b; margin-top: 0; margin-bottom: 5px; }
+      .meta { color: #64748b; font-size: 13px; margin-bottom: 15px; }
+      .summary { background-color: #f8fafc; border-left: 4px solid #6366f1; padding: 12px; margin-bottom: 15px; }
+      .content { margin-top: 15px; }
+    </style>
+    </head>
+    <body>
+      <h1>Check-in History: ${reporteeName}</h1>
+      <p style="color: #64748b; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
+      ${notes.map(note => {
+        const summary = noteSummaries[note.id] || (note as any).aiSummary;
+        const dateStr = new Date(note.date).toLocaleString();
+        return `
+          <div class="note-card">
+            <h2>${note.type}</h2>
+            <div class="meta">📅 ${dateStr}</div>
+            ${summary ? `<div class="summary"><strong>AI Summary:</strong><p>${summary.tldr || ''}</p></div>` : ''}
+            <div class="content">${formatToHtml(note.content)}</div>
+          </div>
+        `;
+      }).join('<hr style="margin:30px 0; border:0; border-top:1px solid #cbd5e1;" />')}
+    </body>
+    </html>
+  `;
+  const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${reporteeName.replace(/\s+/g, '_')}_Checkin_History_${new Date().toISOString().split('T')[0]}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+export const exportHistoryToPdf = (notes: any[], reporteeName: string, noteSummaries: Record<number, any>) => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head><title>Check-in History - ${reporteeName}</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 40px; }
+      h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 5px; }
+      .note-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 25px; margin-bottom: 30px; page-break-inside: avoid; }
+      h2 { color: #1e293b; margin-top: 0; margin-bottom: 5px; }
+      .meta { color: #64748b; font-size: 13px; margin-bottom: 15px; }
+      .summary { background-color: #e0e7ff; border-left: 4px solid #6366f1; padding: 12px; margin-bottom: 15px; border-radius: 4px; }
+      .content { margin-top: 15px; }
+      @media print { body { padding: 0; } .note-card { border: none; border-bottom: 1px solid #cbd5e1; border-radius: 0; padding: 20px 0; } }
+    </style>
+    </head>
+    <body>
+      <h1>Check-in History: ${reporteeName}</h1>
+      <p style="color: #64748b; font-size: 14px; margin-bottom: 30px;">Generated on ${new Date().toLocaleDateString()}</p>
+      ${notes.map(note => {
+        const summary = noteSummaries[note.id] || (note as any).aiSummary;
+        const dateStr = new Date(note.date).toLocaleString();
+        return `
+          <div class="note-card">
+            <h2>${note.type}</h2>
+            <div class="meta">📅 ${dateStr}</div>
+            ${summary ? `<div class="summary"><strong>AI Summary:</strong><p style="margin:6px 0 0 0;">${summary.tldr || ''}</p></div>` : ''}
+            <div class="content">${formatToHtml(note.content)}</div>
+          </div>
+        `;
+      }).join('')}
+      <script>window.onload = () => { window.print(); };</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
 
 export function formatToHtml(raw: string) {
   if (!raw) return "";
@@ -257,6 +401,8 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showListMenu, setShowListMenu] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkUrlInput, setLinkUrlInput] = useState('https://');
   const [noteSummaries, setNoteSummaries] = useState<Record<number, any>>(() => {
     // Initialize from any existing aiSummary data on notes
     const map: Record<number, any> = {};
@@ -362,28 +508,9 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
     if (command === 'heading') {
       document.execCommand('formatBlock', false, '<h3>');
     } else if (command === 'createLink') {
-      const sel = window.getSelection();
-      let currentRange: Range | null = null;
-      let selectedText = '';
-      if (sel && sel.rangeCount > 0) {
-        currentRange = sel.getRangeAt(0).cloneRange();
-        selectedText = currentRange.toString();
-      } else if (savedRangeRef.current) {
-        currentRange = savedRangeRef.current.cloneRange();
-        selectedText = currentRange.toString();
-      }
-      const url = prompt('Enter link URL:', 'https://');
-      if (url) {
-        editorRef.current.focus();
-        const selAfter = window.getSelection();
-        if (selAfter && currentRange && editorRef.current.contains(currentRange.commonAncestorContainer)) {
-          selAfter.removeAllRanges();
-          selAfter.addRange(currentRange);
-        }
-        const textToDisplay = selectedText || url;
-        const linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 500;">${textToDisplay}</a>`;
-        document.execCommand('insertHTML', false, linkHtml);
-      }
+      saveSelection();
+      setShowLinkModal(true);
+      setLinkUrlInput('https://');
     } else if (command === 'checkbox') {
       document.execCommand('insertHTML', false, '<div style="display: flex; align-items: center; gap: 8px; margin: 6px 0;"><input type="checkbox" style="cursor: pointer; width: 15px; height: 15px;" /> <span>&nbsp;</span></div>');
     } else if (command === 'completedCheckbox') {
@@ -429,7 +556,7 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
   const renderEditorArea = () => (
     <div className="flex-1 flex flex-col bg-white overflow-hidden h-full relative">
       {/* Formatting Toolbar */}
-      <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
+      <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-1 shrink-0 flex-wrap">
           <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('bold')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Bold (Cmd+B)"><Bold className="w-4 h-4" /></button>
           <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand('italic')} className="p-1.5 hover:bg-slate-200 rounded text-slate-700 transition" title="Italic (Cmd+I)"><Italic className="w-4 h-4" /></button>
@@ -474,12 +601,23 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Check-in notes editor"
           onInput={(e) => { setContent(e.currentTarget.innerHTML); saveSelection(); }}
           onKeyDown={handleKeyDown}
           onKeyUp={saveSelection}
           onMouseUp={saveSelection}
-          onClick={saveSelection}
-          className="w-full h-full min-h-[350px] outline-none text-slate-800 font-sans text-[14px] leading-relaxed"
+          onClick={(e) => {
+            saveSelection();
+            const anchor = (e.target as HTMLElement).closest('a');
+            if (anchor && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              const href = anchor.getAttribute('href');
+              if (href) window.open(href, '_blank', 'noopener,noreferrer');
+            }
+          }}
+          className="w-full h-full min-h-[350px] outline-none focus-visible:outline-2 focus-visible:outline-indigo-500 rounded text-slate-800 font-sans text-[14px] leading-relaxed"
         />
         {!content && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center flex-col text-slate-400 gap-2 opacity-50 pt-10">
@@ -500,9 +638,9 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
             <h2 className="text-[14px] font-semibold text-slate-800">Check-in Notes</h2>
           </div>
           
-          <div className="flex bg-slate-200/50 p-0.5 rounded">
-             <button role="tab" aria-selected={activeTab === 'write'} onClick={() => setActiveTab('write')} className={`px-3 py-1 text-[12px] font-medium rounded-sm transition-all ${activeTab === 'write' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Draft</button>
-             <button role="tab" aria-selected={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')} className={`px-3 py-1 text-[12px] font-medium rounded-sm transition-all ${activeTab === 'timeline' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>History</button>
+          <div role="tablist" aria-label="Notes view mode" className="flex bg-slate-200/50 p-0.5 rounded">
+             <button role="tab" aria-selected={activeTab === 'write'} aria-controls="notes-tabpanel" onClick={() => setActiveTab('write')} className={`px-3 py-1 text-[12px] font-medium rounded-sm transition-all focus-visible:outline-2 focus-visible:outline-indigo-500 ${activeTab === 'write' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Draft</button>
+             <button role="tab" aria-selected={activeTab === 'timeline'} aria-controls="notes-tabpanel" onClick={() => setActiveTab('timeline')} className={`px-3 py-1 text-[12px] font-medium rounded-sm transition-all focus-visible:outline-2 focus-visible:outline-indigo-500 ${activeTab === 'timeline' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>History</button>
           </div>
         </div>
 
@@ -598,6 +736,26 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
             >
               {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
               Save
+            </button>
+          </div>
+        )}
+        {activeTab === 'timeline' && initialNotes.length > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportHistoryToPdf(initialNotes, reporteeName, noteSummaries)}
+              className="px-2.5 py-1 bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold rounded shadow-sm hover:bg-slate-50 transition flex items-center gap-1.5 shrink-0"
+              title="Export Full History to PDF"
+            >
+              <FileText className="w-3.5 h-3.5 text-indigo-600" />
+              Export PDF
+            </button>
+            <button
+              onClick={() => exportHistoryToDoc(initialNotes, reporteeName, noteSummaries)}
+              className="px-2.5 py-1 bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold rounded shadow-sm hover:bg-slate-50 transition flex items-center gap-1.5 shrink-0"
+              title="Export Full History to Word (.doc)"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              Export Word
             </button>
           </div>
         )}
@@ -796,6 +954,22 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
                     <h4 className="text-[14px] font-semibold text-slate-800">{note.type}</h4>
                     <span className="text-[12px] text-slate-500 flex items-center gap-1.5 mt-1"><Clock className="w-3 h-3" /> {new Date(note.date).toLocaleString()}</span>
                   </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => exportNoteToPdf(note, reporteeName, noteSummaries[note.id] || (note as any).aiSummary)}
+                      className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition text-[11px] flex items-center gap-1 font-medium"
+                      title="Export Note as PDF"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> PDF
+                    </button>
+                    <button
+                      onClick={() => exportNoteToDoc(note, reporteeName, noteSummaries[note.id] || (note as any).aiSummary)}
+                      className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition text-[11px] flex items-center gap-1 font-medium"
+                      title="Export Note as Word (.doc)"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Word
+                    </button>
+                  </div>
                 </div>
 
                 {/* AI Summary Block */}
@@ -924,6 +1098,110 @@ export function NotesEditor({ reporteeName, reporteeId, initialNotes = [], freqI
               <button onClick={() => setShowShortcutsModal(false)} className="px-4 py-1.5 bg-indigo-600 text-white font-medium rounded-lg text-[13px] hover:bg-indigo-700 transition">
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Insert Link Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-slate-50">
+              <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-800">
+                <LinkIcon className="w-4 h-4 text-indigo-600" /> Insert Hyperlink
+              </div>
+              <button onClick={() => setShowLinkModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-slate-700 mb-1">URL / Link Address</label>
+                <input
+                  type="text"
+                  value={linkUrlInput}
+                  onChange={(e) => setLinkUrlInput(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-[14px] outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 font-mono"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (linkUrlInput && linkUrlInput !== 'https://' && editorRef.current) {
+                        let currentRange: Range | null = null;
+                        let selectedText = '';
+                        if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer) && !savedRangeRef.current.collapsed) {
+                          currentRange = savedRangeRef.current.cloneRange();
+                          selectedText = currentRange.toString();
+                        } else if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer)) {
+                          currentRange = savedRangeRef.current.cloneRange();
+                          selectedText = currentRange.toString();
+                        } else {
+                          const sel = window.getSelection();
+                          if (sel && sel.rangeCount > 0 && editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                            currentRange = sel.getRangeAt(0).cloneRange();
+                            selectedText = currentRange.toString();
+                          }
+                        }
+                        editorRef.current.focus();
+                        const sel = window.getSelection();
+                        if (sel && currentRange) {
+                          sel.removeAllRanges();
+                          sel.addRange(currentRange);
+                        }
+                        const textToDisplay = selectedText || linkUrlInput;
+                        const linkHtml = `<a href="${linkUrlInput}" title="Ctrl + Click to open link (${linkUrlInput})" target="_blank" rel="noopener noreferrer" style="color: #2563eb !important; text-decoration: underline !important; font-weight: 600 !important;">${textToDisplay}</a>`;
+                        document.execCommand('insertHTML', false, linkHtml);
+                        setShowLinkModal(false);
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowLinkModal(false)}
+                  className="px-4 py-2 text-[13px] font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (linkUrlInput && linkUrlInput !== 'https://' && editorRef.current) {
+                      let currentRange: Range | null = null;
+                      let selectedText = '';
+                      if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer) && !savedRangeRef.current.collapsed) {
+                        currentRange = savedRangeRef.current.cloneRange();
+                        selectedText = currentRange.toString();
+                      } else if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer)) {
+                        currentRange = savedRangeRef.current.cloneRange();
+                        selectedText = currentRange.toString();
+                      } else {
+                        const sel = window.getSelection();
+                        if (sel && sel.rangeCount > 0 && editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                          currentRange = sel.getRangeAt(0).cloneRange();
+                          selectedText = currentRange.toString();
+                        }
+                      }
+                      editorRef.current.focus();
+                      const sel = window.getSelection();
+                      if (sel && currentRange) {
+                        sel.removeAllRanges();
+                        sel.addRange(currentRange);
+                      }
+                      const textToDisplay = selectedText || linkUrlInput;
+                      const linkHtml = `<a href="${linkUrlInput}" title="Ctrl + Click to open link (${linkUrlInput})" target="_blank" rel="noopener noreferrer" style="color: #2563eb !important; text-decoration: underline !important; font-weight: 600 !important;">${textToDisplay}</a>`;
+                      document.execCommand('insertHTML', false, linkHtml);
+                      setShowLinkModal(false);
+                    }
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-lg shadow-sm transition text-[13px]"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
           </div>
         </div>

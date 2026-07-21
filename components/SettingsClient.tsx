@@ -8,6 +8,7 @@ import { useCardConfig, GoalModalConfig } from "@/lib/CardConfigContext";
 import { getStorageConfig, saveStorageConfig, StorageMode } from "@/lib/storageProvider";
 import { useIndexedDB } from "@/components/IndexedDBProvider";
 import { SyncStatusIndicator } from "./OneDriveSyncModal";
+import { ONBOARDING_TEMPLATES } from "./OnboardingModal";
 
 export function SettingsClient({ initialConfig }: { initialConfig: any }) {
   const [config, setConfig] = useState(initialConfig);
@@ -24,6 +25,8 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
   const [storageCfg, setStorageCfg] = useState(() => typeof window !== 'undefined' ? getStorageConfig() : { mode: 'server' as StorageMode, isConfigured: true });
   const [sidebarExpanded, setSidebarExpanded] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('manager_sidebar_expanded') !== 'false' : true);
   const [selectedTplFreqId, setSelectedTplFreqId] = useState("weekly");
+  const [selectedOnboardRole, setSelectedOnboardRole] = useState<'frontend' | 'backend' | 'general'>('frontend');
+  const [templateSectionTab, setTemplateSectionTab] = useState<'checkin' | 'onboarding'>('checkin');
 
   // activeTab is now persisted in context as activeSettingsTab
   const activeTab = activeSettingsTab;
@@ -184,18 +187,11 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
             {activeTab === 'cardDisplay' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
           </button>
           <button 
-            onClick={() => setActiveTab('frequencies')} 
-            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === 'frequencies' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('checkinOnboarding')} 
+            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === 'checkinOnboarding' || activeTab === 'frequencies' || activeTab === 'templates' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            Check-in frequency
-            {activeTab === 'frequencies' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
-          </button>
-          <button 
-            onClick={() => setActiveTab('templates')} 
-            className={`pb-4 text-[13px] sm:text-[14px] font-semibold transition-colors relative ${activeTab === 'templates' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            <span className="relative z-10">Check-in Templates</span>
-            {activeTab === 'templates' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
+            Check-in & Onboarding Templates
+            {(activeTab === 'checkinOnboarding' || activeTab === 'frequencies' || activeTab === 'templates') && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-900" />}
           </button>
           <button 
             onClick={() => setActiveTab('goals')} 
@@ -465,56 +461,7 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
           </section>
         )}
 
-        {activeTab === 'frequencies' && (
-          <section className="bg-white p-6 rounded-md border border-slate-200 shadow-sm flex flex-col max-w-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-2">
-                <div className="text-slate-600"><Settings className="w-4 h-4" /></div>
-                <h3 className="text-[15px] font-semibold text-slate-800">Check-in Frequencies</h3>
-              </div>
-              <button 
-                onClick={() => setShowAddFreq(true)}
-                className="px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium text-[12px] text-slate-700 rounded border border-slate-200 flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add
-              </button>
-            </div>
-            
-            {showAddFreq && (
-              <div className="mb-4 p-4 border border-indigo-100 bg-indigo-50/50 rounded-lg space-y-3">
-                <div className="flex gap-3">
-                  <div className="flex-1 space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Unique ID</label>
-                    <input type="text" value={newFreqId} onChange={e => setNewFreqId(e.target.value)} placeholder="e.g. yearly" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-[13px] outline-none focus:border-slate-400" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Display Label</label>
-                    <input type="text" value={newFreqLabel} onChange={e => setNewFreqLabel(e.target.value)} placeholder="e.g. Yearly Check-in" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-[13px] outline-none focus:border-slate-400" />
-                  </div>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowAddFreq(false)} className="px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-100 rounded transition-colors">Cancel</button>
-                  <button onClick={addFreq} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-medium rounded transition-colors shadow-sm">Add Frequency</button>
-                </div>
-              </div>
-            )}
-            
-            <div className="space-y-2 flex-1 overflow-y-auto">
-              {config.checkInFrequencies?.map((freq: any) => (
-                <div key={freq.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md hover:border-slate-300 transition-colors">
-                  <div>
-                    <span className="font-medium text-slate-800 text-[13px]">{freq.label}</span>
-                    <span className="text-[11px] text-slate-500 font-mono block uppercase mt-0.5">{freq.id}</span>
-                  </div>
-                  <button onClick={() => removeFreq(freq.id)} className="text-slate-400 hover:text-red-500 p-1 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              ))}
-              {(!config.checkInFrequencies || config.checkInFrequencies.length === 0) && <p className="text-[13px] text-slate-400 py-8 text-center">No frequencies configured.</p>}
-            </div>
-          </section>
-        )}
-
-        {activeTab === 'templates' && (() => {
+        {(activeTab === 'checkinOnboarding' || activeTab === 'frequencies' || activeTab === 'templates') && (() => {
           const freqs = config.checkInFrequencies || [
             { id: "weekly", label: "Weekly Check-in" },
             { id: "monthly", label: "Monthly Check-in" },
@@ -562,40 +509,324 @@ export function SettingsClient({ initialConfig }: { initialConfig: any }) {
             }
           };
 
+          const currentOnboard = config.onboardingTemplates || ONBOARDING_TEMPLATES;
+          const roleData = currentOnboard[selectedOnboardRole] || ONBOARDING_TEMPLATES[selectedOnboardRole] || ONBOARDING_TEMPLATES.general;
+
+          const updateOnboardingRoleData = (updater: (prevRole: any) => any) => {
+            const updatedRole = updater({ ...roleData });
+            const newOnboard = {
+              ...currentOnboard,
+              [selectedOnboardRole]: updatedRole
+            };
+            setConfig({ ...config, onboardingTemplates: newOnboard });
+          };
+
           return (
-            <section className="bg-white p-6 rounded-md border border-slate-200 shadow-sm max-w-3xl space-y-5">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <div className="text-slate-600"><FileText className="w-4 h-4" /></div>
-                <h3 className="text-[15px] font-semibold text-slate-800">Check-in Templates by Frequency</h3>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Select Check-in Frequency</label>
-                <select
-                  value={activeFreq.id}
-                  onChange={(e) => setSelectedTplFreqId(e.target.value)}
-                  className="w-full sm:w-80 px-3 py-2 bg-white border border-slate-300 rounded-lg text-[13px] font-medium text-slate-800 outline-none focus:border-indigo-500 shadow-sm cursor-pointer"
-                >
-                  {freqs.map((f: any) => (
-                    <option key={f.id} value={f.id}>{f.label}</option>
-                  ))}
-                  {freqs.length === 0 && <option value="weekly">Weekly Check-in</option>}
-                </select>
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Template Content for {activeFreq.label}</label>
-                  <span className="text-[11px] text-indigo-600 font-medium">Reflects immediately inside Check-in notes</span>
+            <div className="max-w-4xl space-y-8 animate-in fade-in duration-200 pb-12">
+              {/* ─── SECTION 1: Check-in Frequencies & Notes ─────────────────────── */}
+              <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
+                  <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-[16px] font-bold text-slate-900">Check-in Frequencies & Notes</h3>
+                    <p className="text-xs text-slate-500">Configure check-in cadences and standard default note templates for 1:1 discussions</p>
+                  </div>
                 </div>
-                <textarea
-                  value={currentContent}
-                  onChange={(e) => handleUpdateContent(e.target.value)}
-                  className="w-full h-56 p-4 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-[13px] font-mono leading-relaxed outline-none focus:border-indigo-500 transition shadow-sm resize-none"
-                  placeholder="Enter default template markdown or checklist items for this frequency..."
-                />
-              </div>
-            </section>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-2">
+                  {/* Left Column: Frequencies List */}
+                  <div className="md:col-span-5 space-y-4 border-r border-slate-100 pr-0 md:pr-5">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Available Frequencies</h4>
+                      <button 
+                        onClick={() => setShowAddFreq(true)}
+                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors rounded text-[11px] font-bold flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Add Frequency
+                      </button>
+                    </div>
+
+                    {showAddFreq && (
+                      <div className="p-3.5 border border-indigo-200 bg-indigo-50/60 rounded-xl space-y-3">
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-600 uppercase">Unique ID</label>
+                            <input type="text" value={newFreqId} onChange={e => setNewFreqId(e.target.value)} placeholder="e.g. biweekly" className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-indigo-500 mt-0.5" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-600 uppercase">Display Label</label>
+                            <input type="text" value={newFreqLabel} onChange={e => setNewFreqLabel(e.target.value)} placeholder="e.g. Bi-Weekly Sync" className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-indigo-500 mt-0.5" />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end pt-1">
+                          <button onClick={() => setShowAddFreq(false)} className="px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-200/60 rounded">Cancel</button>
+                          <button onClick={addFreq} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded shadow-sm">Add</button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2 max-h-[360px] overflow-y-auto">
+                      {freqs.map((freq: any) => {
+                        const isSelected = freq.id === activeFreq.id;
+                        return (
+                          <div
+                            key={freq.id}
+                            onClick={() => setSelectedTplFreqId(freq.id)}
+                            className={`flex items-center justify-between p-3 rounded-xl cursor-pointer border transition-all ${
+                              isSelected
+                                ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 shadow-sm font-semibold'
+                                : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                            }`}
+                          >
+                            <div>
+                              <div className="text-xs">{freq.label}</div>
+                              <div className="text-[10px] text-slate-400 font-mono uppercase tracking-tight mt-0.5">{freq.id}</div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFreq(freq.id);
+                              }}
+                              className="text-slate-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50 transition-colors"
+                              title="Delete frequency"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Template Editor */}
+                  <div className="md:col-span-7 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Default Note Template</h4>
+                        <p className="text-[11px] text-slate-500">Editing structure for: <span className="font-bold text-indigo-600">{activeFreq.label}</span></p>
+                      </div>
+                      <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold px-2 py-0.5 rounded-full">
+                        Reflects at Every Employee
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={currentContent}
+                      onChange={(e) => handleUpdateContent(e.target.value)}
+                      className="w-full h-[320px] p-4 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs font-mono leading-relaxed outline-none focus:border-indigo-500 transition shadow-sm resize-none"
+                      placeholder="Enter default markdown checklist items for check-in notes..."
+                    />
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => handleSave()}
+                        disabled={isSaving}
+                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        {isSaving ? "Saving..." : "Save & Apply Templates"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ─── SECTION 2: 30/60/90 Onboarding Plans (Separate Section Below) ─── */}
+              <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
+                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                    <Target className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-[16px] font-bold text-slate-900">30 / 60 / 90 Day Onboarding Plans</h3>
+                    <p className="text-xs text-slate-500">Configure role-based onboarding milestones, goals, and weekly action items for new team members</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6 pt-2">
+                  <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
+                    <div className="p-1.5 bg-indigo-600 text-white rounded-lg mt-0.5">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <div className="text-xs text-slate-700 space-y-1">
+                      <p className="font-bold text-slate-900">Configure Role-Based 30 / 60 / 90 Day Onboarding Templates</p>
+                      <p className="leading-relaxed">
+                        Whenever you launch a 30/60/90 onboarding plan inside any team member&apos;s profile (`Reportee Details → Start Onboarding Plan`), these exact templates will be used to automatically generate milestones, goals, and weekly action items for that employee.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Role Selector */}
+                  <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOnboardRole('frontend')}
+                      className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                        selectedOnboardRole === 'frontend'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Senior Frontend Engineer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOnboardRole('backend')}
+                      className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                        selectedOnboardRole === 'backend'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Backend & Systems Engineer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOnboardRole('general')}
+                      className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                        selectedOnboardRole === 'general'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      General Engineering Onboarding
+                    </button>
+                  </div>
+
+                  {/* Phase Editors: 30, 60, 90 */}
+                  <div className="space-y-6 max-h-[500px] overflow-y-auto pr-1">
+                    {(['phase30', 'phase60', 'phase90'] as const).map((phaseKey, idx) => {
+                      const phase = roleData[phaseKey] || { goalTitle: "", description: "", tasks: [] };
+                      const phaseNum = (idx + 1) * 30;
+                      const phaseBg = idx === 0 ? 'border-indigo-200 bg-indigo-50/20' : idx === 1 ? 'border-amber-200 bg-amber-50/20' : 'border-emerald-200 bg-emerald-50/20';
+                      const badgeBg = idx === 0 ? 'bg-indigo-600 text-white' : idx === 1 ? 'bg-amber-600 text-white' : 'bg-emerald-600 text-white';
+
+                      return (
+                        <div key={phaseKey} className={`p-5 rounded-2xl border ${phaseBg} space-y-4`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`text-[11px] font-black px-2.5 py-1 rounded-lg uppercase ${badgeBg}`}>
+                                Days 1-{phaseNum}
+                              </span>
+                              <h5 className="text-sm font-bold text-slate-900">Phase {idx + 1} Goal & Milestones</h5>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                Goal Title (created inside tracker)
+                              </label>
+                              <input
+                                type="text"
+                                value={phase.goalTitle}
+                                onChange={(e) => {
+                                  updateOnboardingRoleData((prev) => ({
+                                    ...prev,
+                                    [phaseKey]: { ...prev[phaseKey], goalTitle: e.target.value }
+                                  }));
+                                }}
+                                className="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 shadow-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                Phase Description & Objectives
+                              </label>
+                              <textarea
+                                value={phase.description}
+                                onChange={(e) => {
+                                  updateOnboardingRoleData((prev) => ({
+                                    ...prev,
+                                    [phaseKey]: { ...prev[phaseKey], description: e.target.value }
+                                  }));
+                                }}
+                                rows={2}
+                                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 shadow-sm resize-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Recommended Milestone Action Items / Tasks
+                              </label>
+                              {phase.tasks && phase.tasks.map((task: string, taskIndex: number) => (
+                                <div key={taskIndex} className="flex items-center gap-2 mb-2">
+                                  <span className="text-slate-400 text-xs font-mono w-5 shrink-0">{taskIndex + 1}.</span>
+                                  <input
+                                    type="text"
+                                    value={task}
+                                    onChange={(e) => {
+                                      updateOnboardingRoleData((prev) => {
+                                        const currentTasks = [...(prev[phaseKey]?.tasks || [])];
+                                        currentTasks[taskIndex] = e.target.value;
+                                        return {
+                                          ...prev,
+                                          [phaseKey]: { ...prev[phaseKey], tasks: currentTasks }
+                                        };
+                                      });
+                                    }}
+                                    className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-500 shadow-sm"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateOnboardingRoleData((prev) => {
+                                        const currentTasks = [...(prev[phaseKey]?.tasks || [])];
+                                        currentTasks.splice(taskIndex, 1);
+                                        return {
+                                          ...prev,
+                                          [phaseKey]: { ...prev[phaseKey], tasks: currentTasks }
+                                        };
+                                      });
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateOnboardingRoleData((prev) => {
+                                    const currentTasks = [...(prev[phaseKey]?.tasks || []), "New milestone item"];
+                                    return {
+                                      ...prev,
+                                      [phaseKey]: { ...prev[phaseKey], tasks: currentTasks }
+                                    };
+                                  });
+                                }}
+                                className="mt-1 px-3 py-1.5 bg-white border border-dashed border-slate-300 hover:border-indigo-400 text-slate-600 hover:text-indigo-600 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Add Task
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-medium">
+                      Changes will apply to all future onboarding plans launched for your reportees.
+                    </span>
+                    <button
+                      onClick={() => handleSave()}
+                      disabled={isSaving}
+                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? "Saving..." : "Save & Apply All Templates"}
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
           );
         })()}
         {activeTab === ('storage' as any) && (

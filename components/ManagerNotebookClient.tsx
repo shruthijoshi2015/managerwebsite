@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Folder, FileText, Plus, ChevronRight, ChevronDown, Trash2, Search, Bold, Italic, List, CheckSquare, Code, Sparkles, Save, Check, Heading, AlertCircle, Minus, Calendar, ListOrdered, CheckCircle2, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, Link as LinkIcon, MoreHorizontal, Image as ImageIcon, Table as TableIcon, Palette, Keyboard, X, Upload, GripVertical, Download } from "lucide-react";
+import { Folder, FileText, Plus, ChevronRight, ChevronDown, Trash2, Search, Bold, Italic, List, CheckSquare, Code, Sparkles, Save, Check, Heading, AlertCircle, Minus, Calendar, ListOrdered, CheckCircle2, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, Link as LinkIcon, MoreHorizontal, Image as ImageIcon, Table as TableIcon, Palette, Keyboard, X, Upload, GripVertical, Download, Loader2 } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { renderFormattedNote, formatToHtml } from "./NotesEditor";
 
@@ -87,6 +87,10 @@ export function ManagerNotebookClient() {
   const [imageModalTab, setImageModalTab] = useState<'upload' | 'embed'>('upload');
   const [imageUrlInput, setImageUrlInput] = useState<string>('');
 
+  // Link insertion modal state
+  const [showLinkModal, setShowLinkModal] = useState<boolean>(false);
+  const [linkUrlInput, setLinkUrlInput] = useState<string>('https://');
+
   // Table interactive controls state
   const draggedTableRef = useRef<HTMLTableElement | null>(null);
   const [activeTableInfo, setActiveTableInfo] = useState<{ td: HTMLTableCellElement; table: HTMLTableElement } | null>(null);
@@ -141,12 +145,21 @@ export function ManagerNotebookClient() {
   }, []);
 
   // Save to localStorage
-  const saveToStorage = (newPages: PageItem[], newFolders?: string[]) => {
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const saveToStorage = (newPages: PageItem[], newFolders?: string[], immediate = true) => {
     localStorage.setItem("manager_generic_notebook_pages", JSON.stringify(newPages));
     if (newFolders) {
       localStorage.setItem("manager_generic_notebook_folders", JSON.stringify(newFolders));
     }
-    setIsSaved(true);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (immediate) {
+      setIsSaved(true);
+    } else {
+      saveTimerRef.current = setTimeout(() => {
+        setIsSaved(true);
+      }, 750);
+    }
   };
 
   const activePage = pages.find(p => p.id === activePageId) || pages[0];
@@ -155,29 +168,29 @@ export function ManagerNotebookClient() {
     setIsSaved(false);
     const updated = pages.map(p => p.id === activePageId ? { ...p, content: text, updatedAt: new Date().toISOString() } : p);
     setPages(updated);
-    saveToStorage(updated);
+    saveToStorage(updated, undefined, false);
   };
 
   const handleUpdateTitle = (title: string) => {
     setIsSaved(false);
     const updated = pages.map(p => p.id === activePageId ? { ...p, title, updatedAt: new Date().toISOString() } : p);
     setPages(updated);
-    saveToStorage(updated);
+    saveToStorage(updated, undefined, false);
   };
 
   const handleAddPage = (folderName: string) => {
     const newPage: PageItem = {
       id: "page_" + Date.now(),
-      title: "Untitled Page",
+      title: "New Page",
       folder: folderName,
-      content: "# Untitled Page\n\nStart typing here...",
+      content: "",
       updatedAt: new Date().toISOString()
     };
     const updated = [newPage, ...pages];
     setPages(updated);
     setActivePageId(newPage.id);
     setOpenFolders(prev => ({ ...prev, [folderName]: true }));
-    saveToStorage(updated);
+    saveToStorage(updated, undefined, true);
   };
 
   const handleDeletePage = (id: string, e: React.MouseEvent) => {
@@ -454,28 +467,9 @@ export function ManagerNotebookClient() {
     if (command === 'heading') {
       document.execCommand('formatBlock', false, '<h3>');
     } else if (command === 'createLink') {
-      const sel = window.getSelection();
-      let currentRange: Range | null = null;
-      let selectedText = '';
-      if (sel && sel.rangeCount > 0) {
-        currentRange = sel.getRangeAt(0).cloneRange();
-        selectedText = currentRange.toString();
-      } else if (savedRangeRef.current) {
-        currentRange = savedRangeRef.current.cloneRange();
-        selectedText = currentRange.toString();
-      }
-      const url = prompt('Enter link URL:', 'https://');
-      if (url) {
-        editorRef.current.focus();
-        const selAfter = window.getSelection();
-        if (selAfter && currentRange && editorRef.current.contains(currentRange.commonAncestorContainer)) {
-          selAfter.removeAllRanges();
-          selAfter.addRange(currentRange);
-        }
-        const textToDisplay = selectedText || url;
-        const linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 500;">${textToDisplay}</a>`;
-        document.execCommand('insertHTML', false, linkHtml);
-      }
+      saveSelection();
+      setShowLinkModal(true);
+      setLinkUrlInput('https://');
     } else if (command === 'insertImage') {
       setShowImageModal(true);
       setImageUrlInput('');
@@ -648,6 +642,7 @@ export function ManagerNotebookClient() {
                           </div>
                           <button 
                             onClick={(e) => handleDeletePage(page.id, e)}
+                            title="Delete Page"
                             className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -713,8 +708,7 @@ export function ManagerNotebookClient() {
                 <span className="text-slate-300">/</span>
                 <span className="text-slate-800 font-bold text-[13px] truncate max-w-[200px]">{activePage.title || "Untitled Page"}</span>
               </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex flex-wrap items-center gap-1.5 py-1 w-full select-none">
                 {/* 3.1 Header / Normal text dropdown */}
                 <select
                   onChange={(e) => {
@@ -722,7 +716,7 @@ export function ManagerNotebookClient() {
                     e.target.value = "";
                   }}
                   defaultValue=""
-                  className="bg-slate-50 border border-slate-200 text-slate-700 text-[12px] font-medium rounded-md px-2 py-1 outline-none hover:bg-slate-100 cursor-pointer"
+                  className="px-2.5 h-8 border border-slate-200 text-slate-700 text-[12px] font-medium rounded-lg bg-white shadow-2xs outline-none hover:bg-slate-50 cursor-pointer shrink-0"
                 >
                   <option value="" disabled>Text Style</option>
                   <option value="<p>">Normal text</option>
@@ -732,25 +726,25 @@ export function ManagerNotebookClient() {
                   <option value="<h4>">Heading 4</option>
                 </select>
 
-                <div className="flex items-center gap-0.5 bg-slate-50 border border-slate-200 p-1 rounded-lg flex-wrap">
-                  <button onClick={() => handleExecCommand("bold")} title="Bold (Cmd+B)" className="p-1.5 hover:bg-slate-200 rounded text-slate-600"><Bold className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => handleExecCommand("italic")} title="Italic (Cmd+I)" className="p-1.5 hover:bg-slate-200 rounded text-slate-600"><Italic className="w-3.5 h-3.5" /></button>
+                <div className="flex items-center gap-0.5 bg-white border border-slate-200 p-0.5 rounded-lg shadow-2xs h-8 shrink-0">
+                  <button onClick={() => handleExecCommand("bold")} title="Bold (Cmd+B)" className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"><Bold className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handleExecCommand("italic")} title="Italic (Cmd+I)" className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"><Italic className="w-3.5 h-3.5" /></button>
                   {/* 3.2 Underline option */}
-                  <button onClick={() => handleExecCommand("underline")} title="Underline (Cmd+U)" className="p-1.5 hover:bg-slate-200 rounded text-slate-600"><Underline className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handleExecCommand("underline")} title="Underline (Cmd+U)" className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"><Underline className="w-3.5 h-3.5" /></button>
                   {/* 3.3 Strike option */}
-                  <button onClick={() => handleExecCommand("strikeThrough")} title="Strikethrough (Cmd+Shift+X)" className="p-1.5 hover:bg-slate-200 rounded text-slate-600"><Strikethrough className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handleExecCommand("strikeThrough")} title="Strikethrough (Cmd+Shift+X)" className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"><Strikethrough className="w-3.5 h-3.5" /></button>
                 </div>
 
                 {/* 3.4 Text Color Dropdown (Notebook Only) */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <button 
                     onMouseDown={e => e.preventDefault()}
                     onClick={() => { setShowColorMenu(!showColorMenu); setShowAlignMenu(false); setShowListMenu(false); setShowMoreMenu(false); }}
                     title="Text & Background Color" 
-                    className="flex items-center gap-1 p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 text-[12px] font-medium"
+                    className="flex items-center gap-1 px-2 h-8 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 text-[12px] font-medium shadow-2xs shrink-0"
                   >
                     <Palette className="w-3.5 h-3.5 text-indigo-600" />
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3 h-3 text-slate-400" />
                   </button>
                   {showColorMenu && (
                     <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl p-3 flex flex-col items-center gap-2.5 z-50 w-[210px]">
@@ -764,64 +758,84 @@ export function ManagerNotebookClient() {
                         }}
                         className="w-full py-1 border border-slate-300 hover:bg-slate-50 rounded-lg text-slate-700 font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-2xs transition"
                       >
-                        <span className="font-serif">T</span> Default
+                        Reset / Default
                       </button>
-
-                      <div className="flex w-full border-b border-slate-200 text-[13px] font-medium">
-                        <button
-                          onMouseDown={e => e.preventDefault()}
-                          onClick={e => { e.preventDefault(); setActiveColorTab('text'); }}
-                          className={`flex-1 pb-1 text-center transition-colors ${activeColorTab === 'text' ? 'text-green-700 font-semibold border-b-2 border-green-700 -mb-px' : 'text-slate-500 hover:text-slate-800'}`}
-                        >
-                          Text
-                        </button>
-                        <button
-                          onMouseDown={e => e.preventDefault()}
-                          onClick={e => { e.preventDefault(); setActiveColorTab('background'); }}
-                          className={`flex-1 pb-1 text-center transition-colors ${activeColorTab === 'background' ? 'text-green-700 font-semibold border-b-2 border-green-700 -mb-px' : 'text-slate-500 hover:text-slate-800'}`}
-                        >
-                          Background
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-5 gap-1.5 w-full pt-1">
-                        {COLOR_SWATCHES.map(c => (
+                      
+                      <div className="w-full">
+                        <div className="flex border-b border-slate-200 mb-2">
                           <button
-                            key={c.color}
                             onMouseDown={e => e.preventDefault()}
-                            onClick={e => {
-                              e.preventDefault();
-                              if (activeColorTab === 'text') {
-                                handleExecCommand('foreColor', c.color);
-                              } else {
-                                handleExecCommand('hiliteColor', c.color);
-                                handleExecCommand('backColor', c.color);
-                              }
-                              setShowColorMenu(false);
-                            }}
-                            className="w-7 h-7 rounded border border-slate-300 hover:scale-110 transition-transform flex items-center justify-center shadow-2xs"
-                            style={{ backgroundColor: c.color }}
-                            title={c.label}
+                            onClick={e => { e.preventDefault(); setActiveColorTab('text'); }}
+                            className={`flex-1 py-1 text-[11px] font-semibold border-b-2 transition ${activeColorTab === 'text' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                           >
-                            {(activeColorTab === 'text' && c.color === '#0f172a') || (activeColorTab === 'background' && c.color === '#fef9c3') ? (
-                              <Check className={`w-3.5 h-3.5 ${c.color === '#fef9c3' ? 'text-slate-800' : 'text-white'}`} />
-                            ) : null}
+                            Text Color
                           </button>
-                        ))}
+                          <button
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={e => { e.preventDefault(); setActiveColorTab('background'); }}
+                            className={`flex-1 py-1 text-[11px] font-semibold border-b-2 transition ${activeColorTab === 'background' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                          >
+                            Highlight
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-5 gap-1.5 p-1">
+                          {(activeColorTab === 'text' ? [
+                            { color: '#0f172a', label: 'Dark Slate' },
+                            { color: '#dc2626', label: 'Red' },
+                            { color: '#ea580c', label: 'Orange' },
+                            { color: '#d97706', label: 'Amber' },
+                            { color: '#16a34a', label: 'Green' },
+                            { color: '#0284c7', label: 'Blue' },
+                            { color: '#4f46e5', label: 'Indigo' },
+                            { color: '#9333ea', label: 'Purple' },
+                            { color: '#db2777', label: 'Pink' },
+                            { color: '#64748b', label: 'Grey' },
+                          ] : [
+                            { color: '#fef9c3', label: 'Yellow' },
+                            { color: '#bbf7d0', label: 'Green' },
+                            { color: '#bfdbfe', label: 'Blue' },
+                            { color: '#e9d5ff', label: 'Purple' },
+                            { color: '#fbcfe8', label: 'Pink' },
+                            { color: '#fed7aa', label: 'Orange' },
+                            { color: '#fecaca', label: 'Red' },
+                            { color: '#e2e8f0', label: 'Grey' },
+                          ]).map(c => (
+                            <button
+                              key={c.color}
+                              onMouseDown={e => e.preventDefault()}
+                              onClick={e => {
+                                e.preventDefault();
+                                if (activeColorTab === 'text') {
+                                  handleExecCommand('foreColor', c.color);
+                                } else {
+                                  handleExecCommand('hiliteColor', c.color);
+                                }
+                                setShowColorMenu(false);
+                              }}
+                              style={{ backgroundColor: c.color }}
+                              title={c.label}
+                              className="w-8 h-8 rounded-full border border-slate-300/60 hover:scale-110 transition shadow-2xs flex items-center justify-center"
+                            >
+                              {(activeColorTab === 'text' && c.color === '#0f172a') || (activeColorTab === 'background' && c.color === '#fef9c3') ? (
+                                <Check className={`w-3.5 h-3.5 ${c.color === '#fef9c3' ? 'text-slate-800' : 'text-white'}`} />
+                              ) : null}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* 3.5 Text Position (Alignment) Dropdown (Notebook Only) */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <button 
                     onClick={() => { setShowAlignMenu(!showAlignMenu); setShowColorMenu(false); setShowListMenu(false); setShowMoreMenu(false); }}
                     title="Text Alignment" 
-                    className="flex items-center gap-1 p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 text-[12px] font-medium"
+                    className="flex items-center gap-1 px-2 h-8 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 text-[12px] font-medium shadow-2xs shrink-0"
                   >
                     <AlignLeft className="w-3.5 h-3.5" />
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3 h-3 text-slate-400" />
                   </button>
                   {showAlignMenu && (
                     <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 flex flex-col z-50 min-w-[120px]">
@@ -834,14 +848,14 @@ export function ManagerNotebookClient() {
                 </div>
 
                 {/* 3.6 Group Bullet Points Dropdown */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <button 
                     onClick={() => { setShowListMenu(!showListMenu); setShowColorMenu(false); setShowAlignMenu(false); setShowMoreMenu(false); }}
                     title="Lists & Tasks" 
-                    className="flex items-center gap-1 p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 text-[12px] font-medium"
+                    className="flex items-center gap-1 px-2 h-8 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 text-[12px] font-medium shadow-2xs shrink-0"
                   >
                     <List className="w-3.5 h-3.5" />
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3 h-3 text-slate-400" />
                   </button>
                   {showListMenu && (
                     <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 flex flex-col z-50 min-w-[140px]">
@@ -853,21 +867,21 @@ export function ManagerNotebookClient() {
                 </div>
 
                 {/* 3.7 Add Link Option */}
-                <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("createLink")} title="Add Link (Cmd+K)" className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600"><LinkIcon className="w-3.5 h-3.5" /></button>
+                <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("createLink")} title="Add Link (Cmd+K)" className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 shadow-2xs shrink-0"><LinkIcon className="w-3.5 h-3.5" /></button>
 
-                <div className="flex items-center gap-0.5 bg-slate-50 border border-slate-200 p-1 rounded-lg flex-wrap">
-                  <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("callout")} title="Callout Box" className="p-1.5 hover:bg-slate-200 rounded text-slate-600"><AlertCircle className="w-3.5 h-3.5 text-indigo-600" /></button>
-                  <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("divider")} title="Divider" className="p-1.5 hover:bg-slate-200 rounded text-slate-600"><Minus className="w-3.5 h-3.5" /></button>
-                  <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("date")} title="Insert Date Stamp" className="p-1.5 hover:bg-slate-200 rounded text-slate-600"><Calendar className="w-3.5 h-3.5 text-amber-600" /></button>
+                <div className="flex items-center gap-0.5 bg-white border border-slate-200 p-0.5 rounded-lg shadow-2xs h-8 shrink-0">
+                  <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("callout")} title="Callout Box" className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"><AlertCircle className="w-3.5 h-3.5 text-indigo-600" /></button>
+                  <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("divider")} title="Divider" className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"><Minus className="w-3.5 h-3.5" /></button>
+                  <button onMouseDown={e => e.preventDefault()} onClick={() => handleExecCommand("date")} title="Insert Date Stamp" className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"><Calendar className="w-3.5 h-3.5 text-amber-600" /></button>
                 </div>
 
                 {/* 3.8 Add Ellipsis & Capability to add Images & Table (Notebook Only) */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <button 
                     onMouseDown={e => e.preventDefault()}
                     onClick={() => { setShowMoreMenu(!showMoreMenu); setShowColorMenu(false); setShowAlignMenu(false); setShowListMenu(false); }}
                     title="Insert Image / Table" 
-                    className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600"
+                    className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 shadow-2xs shrink-0"
                   >
                     <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
@@ -883,20 +897,63 @@ export function ManagerNotebookClient() {
                 <button 
                   onClick={() => setShowShortcutsModal(true)} 
                   title="Keyboard Shortcuts (Alt+K)" 
-                  className="p-1.5 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 rounded-lg text-indigo-600 font-medium text-[11px] flex items-center gap-1"
+                  className="w-8 h-8 flex items-center justify-center bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 rounded-lg text-indigo-600 shadow-2xs shrink-0 transition-colors"
                 >
                   <Keyboard className="w-3.5 h-3.5" />
                 </button>
 
                 {/* Voice Dictation Button inside Editor */}
-                <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-lg ml-1">
-                  <span className="text-[11px] font-semibold text-indigo-700">Voice Dictate:</span>
-                  <VoiceInputButton onResult={(speech) => handleUpdateContent(activePage.content + (activePage.content ? "<br/><br/>" : "") + speech)} />
-                </div>
+                <VoiceInputButton
+                  title="Voice Dictate (Click to speak)"
+                  className="w-8 h-8 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 rounded-lg text-indigo-600 hover:text-indigo-700 shadow-2xs shrink-0 transition-colors ml-1"
+                  onResult={(speech) => handleUpdateContent(activePage.content + (activePage.content ? "<br/><br/>" : "") + speech)}
+                />
 
-                <div className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-600 ml-1">
-                  <Check className="w-3.5 h-3.5" /> Saved
-                </div>
+                {isSaved ? (
+                  <div className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 ml-1 h-8 px-2 shrink-0">
+                    <Check className="w-3.5 h-3.5" /> Saved
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-600 ml-1 h-8 px-2 shrink-0">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
+                  </div>
+                )}
+
+                <button
+                  onClick={(e) => handleDeletePage(activePageId, e)}
+                  title="Delete Page"
+                  className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 hover:border-red-200 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg shadow-2xs shrink-0 transition-all ml-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) return;
+                    printWindow.document.write(`
+                      <html>
+                      <head><title>${activePage.title || 'Notebook Page'}</title>
+                      <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 40px; }
+                        h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+                        @media print { body { padding: 0; } }
+                      </style>
+                      </head>
+                      <body>
+                        <h1>${activePage.title || 'Notebook Page'}</h1>
+                        <div>${activePage.content || ''}</div>
+                        <script>window.onload = () => { window.print(); };</script>
+                      </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }}
+                  title="Export Page (.doc / .pdf)"
+                  className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg shadow-2xs shrink-0 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
 
@@ -1182,7 +1239,17 @@ export function ManagerNotebookClient() {
                   onKeyDown={handleKeyDown}
                   onKeyUp={(e) => { checkActiveTableSelection(); saveSelection(); updateTableOverlayPos(); updateImageOverlayPos(); }}
                   onMouseUp={(e) => { checkActiveTableSelection(); saveSelection(); checkImageSelection(e.target); }}
-                  onClick={(e) => { checkActiveTableSelection(); saveSelection(); checkImageSelection(e.target); }}
+                  onClick={(e) => {
+                    checkActiveTableSelection();
+                    saveSelection();
+                    checkImageSelection(e.target);
+                    const anchor = (e.target as HTMLElement).closest('a');
+                    if (anchor && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      const href = anchor.getAttribute('href');
+                      if (href) window.open(href, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
                   onDragOver={(e) => {
                     if (draggedTableRef.current) {
                       e.preventDefault();
@@ -1343,6 +1410,112 @@ export function ManagerNotebookClient() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Insert Link Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-slate-50">
+              <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-800">
+                <LinkIcon className="w-4 h-4 text-indigo-600" /> Insert Hyperlink
+              </div>
+              <button onClick={() => setShowLinkModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-slate-700 mb-1">URL / Link Address</label>
+                <input
+                  type="text"
+                  value={linkUrlInput}
+                  onChange={(e) => setLinkUrlInput(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-[14px] outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 font-mono"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (linkUrlInput && linkUrlInput !== 'https://' && editorRef.current) {
+                        let currentRange: Range | null = null;
+                        let selectedText = '';
+                        if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer) && !savedRangeRef.current.collapsed) {
+                          currentRange = savedRangeRef.current.cloneRange();
+                          selectedText = currentRange.toString();
+                        } else if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer)) {
+                          currentRange = savedRangeRef.current.cloneRange();
+                          selectedText = currentRange.toString();
+                        } else {
+                          const sel = window.getSelection();
+                          if (sel && sel.rangeCount > 0 && editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                            currentRange = sel.getRangeAt(0).cloneRange();
+                            selectedText = currentRange.toString();
+                          }
+                        }
+                        editorRef.current.focus();
+                        const sel = window.getSelection();
+                        if (sel && currentRange) {
+                          sel.removeAllRanges();
+                          sel.addRange(currentRange);
+                        }
+                        const textToDisplay = selectedText || linkUrlInput;
+                        const linkHtml = `<a href="${linkUrlInput}" title="Ctrl + Click to open link (${linkUrlInput})" target="_blank" rel="noopener noreferrer" style="color: #2563eb !important; text-decoration: underline !important; font-weight: 600 !important;">${textToDisplay}</a>`;
+                        document.execCommand('insertHTML', false, linkHtml);
+                        handleUpdateContent(editorRef.current.innerHTML);
+                        setShowLinkModal(false);
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowLinkModal(false)}
+                  className="px-4 py-2 text-[13px] font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (linkUrlInput && linkUrlInput !== 'https://' && editorRef.current) {
+                      let currentRange: Range | null = null;
+                      let selectedText = '';
+                      if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer) && !savedRangeRef.current.collapsed) {
+                        currentRange = savedRangeRef.current.cloneRange();
+                        selectedText = currentRange.toString();
+                      } else if (savedRangeRef.current && editorRef.current.contains(savedRangeRef.current.commonAncestorContainer)) {
+                        currentRange = savedRangeRef.current.cloneRange();
+                        selectedText = currentRange.toString();
+                      } else {
+                        const sel = window.getSelection();
+                        if (sel && sel.rangeCount > 0 && editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                          currentRange = sel.getRangeAt(0).cloneRange();
+                          selectedText = currentRange.toString();
+                        }
+                      }
+                      editorRef.current.focus();
+                      const sel = window.getSelection();
+                      if (sel && currentRange) {
+                        sel.removeAllRanges();
+                        sel.addRange(currentRange);
+                      }
+                      const textToDisplay = selectedText || linkUrlInput;
+                      const linkHtml = `<a href="${linkUrlInput}" title="Ctrl + Click to open link (${linkUrlInput})" target="_blank" rel="noopener noreferrer" style="color: #2563eb !important; text-decoration: underline !important; font-weight: 600 !important;">${textToDisplay}</a>`;
+                      document.execCommand('insertHTML', false, linkHtml);
+                      handleUpdateContent(editorRef.current.innerHTML);
+                      setShowLinkModal(false);
+                    }
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-lg shadow-sm transition text-[13px]"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
           </div>
         </div>
